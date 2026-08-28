@@ -325,27 +325,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
 
       try {
-        const response = await fetch('/api/telegram-alert', {
+        let response = await fetch('/api/telegram-alert', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        });
+        }).catch(() => null);
 
-        const data = await response.json();
+        // Fallback to direct backend URL if proxy had 502
+        if (!response || !response.ok) {
+          response = await fetch('http://127.0.0.1:3001/api/telegram-alert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }).catch(() => null);
+        }
 
-        if (response.ok && data.success) {
+        // Fallback to direct client-side Telegram API if backend was unreachable
+        if (!response || !response.ok) {
+          const directTgMsg = `🚨 SENTINEL RESPONSE ACTION\n\nAction: ${actionTitle}\nIncident: ${incident.caseId}\nUser: ${incident.userName}\nRisk: ${incident.riskScore}/100 — CRITICAL\nTime: ${payload.timestamp}\n\nSENTINEL Behaviour Intelligence`;
+          response = await fetch('https://api.telegram.org/bot8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: '1295989935',
+              text: directTgMsg,
+            }),
+          }).catch(() => null);
+        }
+
+        const data = response ? await response.json().catch(() => null) : null;
+
+        if (response && response.ok && (data?.success || data?.ok)) {
           result = { success: true, telegramSent: true };
           addToast('✅ Telegram alert sent successfully.', 'success');
         } else {
           result = {
             success: false,
             telegramSent: false,
-            error: data.error || 'Unable to deliver Telegram notification.',
+            error: data?.error || data?.description || 'Unable to deliver Telegram notification.',
           };
           addToast(
-            `❌ Telegram Alert Failed: Security response was recorded, but Telegram notification could not be delivered. (${data.error || 'Error'})`,
+            `❌ Telegram Alert Failed: Security response was recorded, but Telegram notification could not be delivered.`,
             'error'
           );
         }
@@ -353,7 +373,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         result = {
           success: false,
           telegramSent: false,
-          error: err?.message || 'Network error reaching /api/telegram-alert backend.',
+          error: err?.message || 'Error sending Telegram alert.',
         };
         addToast(
           '❌ Telegram Alert Failed: Security response was recorded, but Telegram notification could not be delivered.',
