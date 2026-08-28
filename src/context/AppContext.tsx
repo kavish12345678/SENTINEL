@@ -26,7 +26,16 @@ interface AppContextType {
   resetDemo: () => void;
 
   // Response execution via backend Telegram API
-  executeResponseAction: (actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM') => Promise<{ success: boolean; telegramSent: boolean; error?: string }>;
+  executeResponseAction: (
+    actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM',
+    customData?: {
+      riskScore?: number;
+      transactionAmount?: string;
+      target?: string;
+      authorityLevel?: string;
+      detectedBehaviours?: string[];
+    }
+  ) => Promise<{ success: boolean; telegramSent: boolean; error?: string }>;
 
   // Alert/Incident actions
   updateIncidentStatus: (status: IncidentStatus) => void;
@@ -286,7 +295,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // REAL BACKEND TELEGRAM DISPATCH FUNCTION
   const executeResponseAction = useCallback(
     async (
-      actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM'
+      actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM',
+      customData?: {
+        riskScore?: number;
+        transactionAmount?: string;
+        target?: string;
+        authorityLevel?: string;
+        detectedBehaviours?: string[];
+      }
     ): Promise<{ success: boolean; telegramSent: boolean; error?: string }> => {
       setIsDispatching(true);
 
@@ -308,14 +324,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const newStatus = newStatusMap[actionKey];
       const timestamp = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+      const currentRisk = customData?.riskScore !== undefined ? customData.riskScore : incident.riskScore;
+      const currentTxn = customData?.transactionAmount || '₹18,50,000';
+      const currentAuth = customData?.authorityLevel || 'Senior Authority';
+
       const payload = {
         action: actionKey,
         incidentId: incident.caseId,
         user: incident.userName,
         role: 'Payment Administrator',
-        riskScore: incident.riskScore,
-        transactionAmount: '₹18,50,000',
-        target: 'XYZ Holdings',
+        riskScore: currentRisk,
+        transactionAmount: currentTxn,
+        target: customData?.target || 'XYZ Holdings',
+        authority: currentAuth,
+        detectedBehaviours: customData?.detectedBehaviours,
         timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
       };
 
@@ -342,7 +364,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         // Fallback to direct client-side Telegram API if backend was unreachable
         if (!response || !response.ok) {
-          const directTgMsg = `🚨 SENTINEL RESPONSE ACTION\n\nAction: ${actionTitle}\nIncident: ${incident.caseId}\nUser: ${incident.userName}\nRisk: ${incident.riskScore}/100 — CRITICAL\nTime: ${payload.timestamp}\n\nSENTINEL Behaviour Intelligence`;
+          const directTgMsg = `🚨 SENTINEL SECURITY ALERT\n\nIncident: ${incident.caseId}\nIdentity: ${incident.userName}\nRisk: ${currentRisk}/100\nTransaction: ${currentTxn}\nAuthority: ${currentAuth}\nExecuted Response: ${actionTitle}\nTime: ${payload.timestamp}\n\nSENTINEL Behaviour Intelligence`;
           response = await fetch('https://api.telegram.org/bot8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8/sendMessage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -391,7 +413,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUsers((prev) =>
           prev.map((u) =>
             u.name.toLowerCase().includes('amit')
-              ? { ...u, status: 'RESTRICTED', riskScore: 92 }
+              ? { ...u, status: 'RESTRICTED', riskScore: currentRisk }
               : u
           )
         );
@@ -404,7 +426,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         action: actionKey,
         actionTitle: actionTitle,
         user: incident.userName,
-        riskScore: incident.riskScore,
+        riskScore: currentRisk,
         timestamp,
         executedBy: 'Security Analyst',
         telegramStatus: result.telegramSent ? 'SENT' : 'FAILED',
