@@ -228,7 +228,7 @@ async function autoDetectChatId(token) {
 
 // 1. POST /api/telegram-alert
 app.post('/api/telegram-alert', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAFQwsKp9bi3TC2FNI731QfbnFFAKItwJAO').trim();
+  const token = (process.env.TELEGRAM_BOT_TOKEN || 'Bot_Token').trim();
   const messageText = formatTelegramMessage(req.body);
   const directLaunchUrl = `https://t.me/share/url?text=${encodeURIComponent(messageText)}`;
 
