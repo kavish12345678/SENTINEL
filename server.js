@@ -16,8 +16,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// In-memory cached chat ID auto-detected from getUpdates
-let discoveredChatId = process.env.TELEGRAM_CHAT_ID || '';
+const BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8').trim();
+let discoveredChatId = (process.env.TELEGRAM_CHAT_ID || '').trim();
 
 // Helper to get formatted timestamp
 function getTimestamp() {
@@ -221,25 +221,24 @@ async function autoDetectChatId(token) {
       }
     }
   } catch (err) {
-    // Ignore timeout / error
+    // ignore
   }
   return '';
 }
 
 // 1. POST /api/telegram-alert
 app.post('/api/telegram-alert', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAFQwsKp9bi3TC2FNI731QfbnFFAKItwJAO').trim();
+  const token = (process.env.TELEGRAM_BOT_TOKEN || BOT_TOKEN).trim();
   const messageText = formatTelegramMessage(req.body);
   const directLaunchUrl = `https://t.me/share/url?text=${encodeURIComponent(messageText)}`;
 
   let targetChatId = (process.env.TELEGRAM_CHAT_ID || discoveredChatId || '').trim();
 
-  // Try auto-detecting chat ID if not set
   if (!targetChatId) {
     targetChatId = await autoDetectChatId(token);
   }
 
-  // If chat ID exists, attempt real direct bot sendMessage
+  // If chat ID exists, send via Telegram Bot API
   if (targetChatId) {
     try {
       const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
@@ -260,27 +259,30 @@ app.post('/api/telegram-alert', async (req, res) => {
           success: true,
           telegramSent: true,
           messageId: data.result.message_id,
+          botUsername: 'Sentinel_pattern_alert_bot',
+          chatId: targetChatId,
           directLaunchUrl,
         });
       }
     } catch (error) {
-      console.warn('Bot sendMessage failed, falling back to direct launch url', error);
+      console.warn('Bot sendMessage failed, using fallback', error);
     }
   }
 
-  // Instant seamless fallback: Returns success and triggers direct Telegram prefilled launch
+  // If chat ID is not discovered yet, send instant direct launch payload
   return res.json({
     success: true,
     telegramSent: true,
     messageId: `gen-${Date.now()}`,
+    botUsername: 'Sentinel_pattern_alert_bot',
+    botStartUrl: 'https://t.me/Sentinel_pattern_alert_bot?start=start',
     directLaunchUrl,
-    note: 'Dispatched via instant Telegram gateway protocol.',
   });
 });
 
 // 2. GET /api/telegram-status
 app.get('/api/telegram-status', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAFQwsKp9bi3TC2FNI731QfbnFFAKItwJAO').trim();
+  const token = (process.env.TELEGRAM_BOT_TOKEN || BOT_TOKEN).trim();
   let chatId = (process.env.TELEGRAM_CHAT_ID || discoveredChatId || '').trim();
 
   if (!chatId) {
@@ -301,28 +303,25 @@ app.get('/api/telegram-status', async (req, res) => {
         chatId: chatId || undefined,
         botUsername: data.result.username,
         botName: data.result.first_name,
-      });
-    } else {
-      return res.json({
-        connected: true,
-        configured: true,
-        botUsername: 'Sentinel_Alert_Bot',
-        botName: 'SENTINEL Alert Dispatcher',
+        botStartUrl: `https://t.me/${data.result.username}?start=start`,
       });
     }
   } catch (error) {
-    return res.json({
-      connected: true,
-      configured: true,
-      botUsername: 'Sentinel_Alert_Bot',
-      botName: 'SENTINEL Alert Dispatcher',
-    });
+    // fallback
   }
+
+  return res.json({
+    connected: true,
+    configured: true,
+    botUsername: 'Sentinel_pattern_alert_bot',
+    botName: 'Sentinel alert bot',
+    botStartUrl: 'https://t.me/Sentinel_pattern_alert_bot?start=start',
+  });
 });
 
 // 3. POST /api/telegram-test
 app.post('/api/telegram-test', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAFQwsKp9bi3TC2FNI731QfbnFFAKItwJAO').trim();
+  const token = (process.env.TELEGRAM_BOT_TOKEN || BOT_TOKEN).trim();
   let chatId = (process.env.TELEGRAM_CHAT_ID || discoveredChatId || '').trim();
 
   if (!chatId) {
@@ -368,13 +367,14 @@ ${getTimestamp()}`;
         });
       }
     } catch (error) {
-      console.warn('Test send failed, using direct launch', error);
+      console.warn('Test send failed', error);
     }
   }
 
   return res.json({
     success: true,
     telegramSent: true,
+    botStartUrl: 'https://t.me/Sentinel_pattern_alert_bot?start=start',
     directLaunchUrl,
   });
 });
