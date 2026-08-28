@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   UserX,
   FileCheck,
@@ -9,12 +9,81 @@ import {
   Radio,
   XCircle,
   Loader2,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { createTelegramShareLink, formatResponseActionNotification } from '../../utils/telegramService';
 
 export default function ResponseCenterPage() {
-  const { incident, auditRecords, executeResponseAction, isDispatching } = useApp();
+  const { incident, auditRecords, executeResponseAction, isDispatching, addToast } = useApp();
   const [activeActionKey, setActiveActionKey] = useState<string | null>(null);
+  const [showConfigDrawer, setShowConfigDrawer] = useState(false);
+  const [serverBotToken, setServerBotToken] = useState('');
+  const [serverChatId, setServerChatId] = useState('');
+  const [backendStatus, setBackendStatus] = useState<{
+    tested: boolean;
+    connected: boolean;
+    botUsername?: string;
+    botName?: string;
+    error?: string;
+  }>({
+    tested: false,
+    connected: false,
+  });
+
+  const checkBackendStatus = () => {
+    fetch('/api/telegram-status')
+      .then((res) => res.json())
+      .then((data) => {
+        setBackendStatus({
+          tested: true,
+          connected: data.connected,
+          botUsername: data.botUsername,
+          botName: data.botName,
+          error: data.error,
+        });
+      })
+      .catch(() => {
+        setBackendStatus({
+          tested: true,
+          connected: false,
+          error: 'Backend API unreachable.',
+        });
+      });
+  };
+
+  useEffect(() => {
+    checkBackendStatus();
+  }, []);
+
+  const handleSaveTelegramCredentials = async () => {
+    if (!serverBotToken.trim() && !serverChatId.trim()) {
+      addToast('Please enter a Bot Token or Chat ID to save.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/set-telegram-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          botToken: serverBotToken.trim() || undefined,
+          chatId: serverChatId.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        addToast('Credentials saved to backend environment.', 'success');
+        checkBackendStatus();
+      }
+    } catch (e: any) {
+      addToast('Error saving credentials to server.', 'error');
+    }
+  };
 
   const handleAction = async (actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM') => {
     if (isDispatching) return;
@@ -43,6 +112,17 @@ export default function ResponseCenterPage() {
 
   const statusInfo = getStatusDisplay();
 
+  // Instant pre-formatted direct Telegram link for demonstration fallback
+  const samplePayload = formatResponseActionNotification({
+    action: 'SUSPEND TRANSACTION',
+    status: incident.status,
+    caseId: incident.caseId,
+    userName: incident.userName,
+    targetAmount: '₹18,50,000',
+    analyst: 'Security Analyst (SOC L2)',
+  });
+  const directTelegramLink = createTelegramShareLink(samplePayload);
+
   return (
     <div className="p-6 pb-24 max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -64,29 +144,104 @@ export default function ResponseCenterPage() {
         </div>
       </div>
 
-      {/* Telegram Alert Recipient Banner */}
-      <div className="bg-gradient-to-r from-blue-950/50 via-slate-900 to-slate-900 border border-blue-500/40 rounded-2xl p-4 flex items-center justify-between shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-            <Radio className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white tracking-wide">Telegram Alert Recipient</span>
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-extrabold border border-green-500/30">
-                ACTIVE
-              </span>
+      {/* Telegram Alert Recipient & Live Status Banner */}
+      <div className="bg-gradient-to-r from-blue-950/50 via-slate-900 to-slate-900 border border-blue-500/40 rounded-2xl p-5 shadow-xl space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+              <Radio className="w-5 h-5 animate-pulse" />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              All containment actions and critical alerts are automatically broadcast to your configured Telegram channel via backend Bot API.
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white tracking-wide">Telegram Alert Gateway</span>
+                {backendStatus.connected ? (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-extrabold border border-green-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    LIVE: @{backendStatus.botUsername || 'SENTINEL_BOT'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-extrabold border border-yellow-500/30">
+                    ⚠️ SERVER BOT CONFIGURATION NEEDED
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Every clicked protocol action below is formatted and broadcast to your Telegram bot via backend API.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition-all"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>{showConfigDrawer ? 'Hide Setup' : 'Bot Setup & Status'}</span>
+              {showConfigDrawer ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            <a
+              href={directTelegramLink}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-all shadow-md"
+              title="Open the formatted incident alert directly in Telegram"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Open in Telegram</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-slate-800">
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs font-mono text-slate-300 font-medium">Telegram Security Channel</span>
-        </div>
+        {/* Collapsible Setup Drawer */}
+        {showConfigDrawer && (
+          <div className="pt-4 border-t border-slate-800/80 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  Telegram Bot Token (from @BotFather)
+                </label>
+                <input
+                  type="text"
+                  value={serverBotToken}
+                  onChange={(e) => setServerBotToken(e.target.value)}
+                  placeholder="e.g. 1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  Telegram Chat ID / Channel ID
+                </label>
+                <input
+                  type="text"
+                  value={serverChatId}
+                  onChange={(e) => setServerChatId(e.target.value)}
+                  placeholder="e.g. 987654321 or -100123456789"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <HelpCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                <span>
+                  Tip: Get your numeric Chat ID by messaging <b>@userinfobot</b> on Telegram, then click <b>Save & Verify</b>!
+                </span>
+              </div>
+              <button
+                onClick={handleSaveTelegramCredentials}
+                className="w-full sm:w-auto px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-all shadow-sm"
+              >
+                Save & Verify Token
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Incident Spotlight Card */}
