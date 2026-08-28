@@ -1,4 +1,4 @@
-// SENTINEL Response Center Simulation Engine
+// SENTINEL Response Center Simulation & Live Incident Engine
 
 export type UserHistoryTier = 'NORMAL' | 'CONCERNING' | 'HIGH_RISK';
 export type TransactionContextTier = 'NORMAL' | 'UNUSUAL' | 'UNKNOWN';
@@ -59,6 +59,136 @@ export interface GovernanceDecision {
   description: string;
   ladderIndex: number; // 0: Standard, 1: Higher, 2: Senior, 3: Highest, -1: None
 }
+
+export interface LiveIncidentStep {
+  stepNumber: number;
+  timestamp: string;
+  title: string;
+  description: string;
+  riskScore: number;
+  riskLevel: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  simStatePatch: Partial<SimulationState>;
+  playbookStepActive: number;
+  chainHighlight: number;
+}
+
+export const LIVE_INCIDENT_SEQUENCE: LiveIncidentStep[] = [
+  {
+    stepNumber: 1,
+    timestamp: '02:14:03',
+    title: 'Unusual Login Detected',
+    description: 'Off-hours session initiated from Delhi VPN node (typical hours: 09:00 AM – 07:00 PM).',
+    riskScore: 35,
+    riskLevel: 'MODERATE',
+    simStatePatch: {
+      baseRisk: 25,
+      unusualLogin: true,
+      unusualResource: false,
+      privilegeChange: false,
+      newBeneficiary: false,
+      transactionAmount: 0,
+      transactionActive: false,
+      suspiciousSequence: false,
+      contextVerified: false,
+    },
+    playbookStepActive: 1,
+    chainHighlight: 1,
+  },
+  {
+    stepNumber: 2,
+    timestamp: '02:16:21',
+    title: 'Unusual Resource Accessed',
+    description: 'High-value corporate clearing account #CC-8821 accessed (0.4% historical baseline access).',
+    riskScore: 48,
+    riskLevel: 'MODERATE',
+    simStatePatch: {
+      unusualResource: true,
+    },
+    playbookStepActive: 2,
+    chainHighlight: 2,
+  },
+  {
+    stepNumber: 3,
+    timestamp: '02:18:44',
+    title: 'Privilege Limit Change Detected',
+    description: 'User elevated transaction ceiling from ₹5,00,000 to ₹25,00,000 (5× increase).',
+    riskScore: 68,
+    riskLevel: 'HIGH',
+    simStatePatch: {
+      privilegeChange: true,
+      suspiciousSequence: true,
+    },
+    playbookStepActive: 3,
+    chainHighlight: 3,
+  },
+  {
+    stepNumber: 4,
+    timestamp: '02:20:12',
+    title: 'New Beneficiary Added',
+    description: 'Recipient modified from "ABC Supplies Ltd" to "XYZ Holdings" (0 historical transactions).',
+    riskScore: 80,
+    riskLevel: 'CRITICAL',
+    simStatePatch: {
+      newBeneficiary: true,
+    },
+    playbookStepActive: 4,
+    chainHighlight: 4,
+  },
+  {
+    stepNumber: 5,
+    timestamp: '02:21:09',
+    title: 'High-Value Transaction Initiated',
+    description: 'Outward RTGS transfer of ₹18,50,000 dispatched to unverified beneficiary XYZ Holdings.',
+    riskScore: 92,
+    riskLevel: 'CRITICAL',
+    simStatePatch: {
+      transactionAmount: 1850000,
+      transactionActive: true,
+      userHistory: 'HIGH_RISK',
+    },
+    playbookStepActive: 5,
+    chainHighlight: 5,
+  },
+  {
+    stepNumber: 6,
+    timestamp: '02:23:14',
+    title: 'Suspicious Behaviour Chain Correlated',
+    description: 'Multi-factor Markov chain penalty triggered (Joint probability P < 0.001).',
+    riskScore: 92,
+    riskLevel: 'CRITICAL',
+    simStatePatch: {
+      suspiciousSequence: true,
+    },
+    playbookStepActive: 6,
+    chainHighlight: 5,
+  },
+  {
+    stepNumber: 7,
+    timestamp: '02:23:15',
+    title: 'Containment Protocol & Senior Authority Enforced',
+    description: 'Autonomous financial containment selected (SUSPEND TRANSACTION) & Telegram alert dispatched.',
+    riskScore: 92,
+    riskLevel: 'CRITICAL',
+    simStatePatch: {
+      presetName: 'CRITICAL_FINANCIAL_THREAT',
+    },
+    playbookStepActive: 7,
+    chainHighlight: 5,
+  },
+  {
+    stepNumber: 8,
+    timestamp: '02:23:20',
+    title: 'Incident Contained & Audit Trail Logged',
+    description: 'Gateway wire suspended, Telegram message delivered to on-call SOC lead, audit trail verified.',
+    riskScore: 92,
+    riskLevel: 'CRITICAL',
+    simStatePatch: {
+      presetName: 'CRITICAL_FINANCIAL_THREAT',
+    },
+    playbookStepActive: 8,
+    chainHighlight: 5,
+  },
+];
 
 export const DEFAULT_SIMULATION_STATE: SimulationState = {
   presetName: 'CRITICAL_FINANCIAL_THREAT',
@@ -304,9 +434,10 @@ export function evaluateSecurityResponse(sim: SimulationState, risk: number): Se
         sim.newBeneficiary ? 'New unverified beneficiary attached' : '',
         sim.privilegeChange ? 'Recent 5× transaction limit increase' : '',
         sim.suspiciousSequence ? 'Coordinated multi-step temporal sequence' : '',
+        'Behaviour deviates significantly from baseline profile',
       ].filter(Boolean),
       decisionSummary:
-        'Critical behavioural risk is associated with an active high-value transaction. Immediate financial containment is recommended.',
+        'Multiple correlated high-risk signals are associated with an active high-value transaction. Immediate financial containment is recommended.',
       isActionRecommended: (actionKey) => actionKey === 'SUSPEND_TRANSACTION',
     };
   }
@@ -325,7 +456,7 @@ export function evaluateSecurityResponse(sim: SimulationState, risk: number): Se
           : 'Severe account compromise indicators require human forensics',
       ],
       decisionSummary:
-        'Multiple correlated high-risk activities require security-team investigation.',
+        'Multiple correlated high-risk signals require security-team investigation.',
       isActionRecommended: (actionKey) => actionKey === 'ESCALATE_TO_TEAM',
     };
   }
@@ -347,7 +478,7 @@ export function evaluateSecurityResponse(sim: SimulationState, risk: number): Se
         'No immediate critical transaction halt required',
       ].filter(Boolean),
       decisionSummary:
-        'Repeated behavioural deviations combined with privileged access changes indicate possible account misuse.',
+        'Repeated behavioural deviations and privilege misuse indicate possible account compromise.',
       isActionRecommended: (actionKey) => actionKey === 'RESTRICT_USER',
     };
   }
@@ -371,7 +502,7 @@ export function evaluateSecurityResponse(sim: SimulationState, risk: number): Se
         'Evidence does not justify full account lockout or transaction freeze',
       ].filter(Boolean),
       decisionSummary:
-        'Behaviour is unusual, but available evidence does not indicate a critical threat. Additional verification is recommended before stronger containment.',
+        'Behaviour is unusual, but current evidence does not indicate a critical threat. Additional verification is recommended.',
       isActionRecommended: (actionKey) => actionKey === 'REQUIRE_VERIFICATION',
     };
   }
@@ -413,7 +544,7 @@ export function evaluateTransactionGovernance(
       authorityTitle: 'STANDARD PROCESSING',
       limitStatus: 'WITHIN_LIMIT',
       approvalRequired: false,
-      description: `Transaction amount is within the standard demo limit (≤ ₹${(standardLimit / 100000).toFixed(1)}L).`,
+      description: `Transaction amount is within standard demo limit (≤ ₹${(standardLimit / 100000).toFixed(1)}L).`,
       ladderIndex: 0,
     };
   }
@@ -448,4 +579,80 @@ export function evaluateTransactionGovernance(
     description: 'Transaction exceeds ₹50L threshold. Highest Executive Authority Approval Required.',
     ladderIndex: 3,
   };
+}
+
+// Generate dynamic What-If counterfactual branches
+export function generateWhatIfScenarios(sim: SimulationState) {
+  const list: Array<{
+    title: string;
+    condition: string;
+    predictedRisk: number;
+    predictedResponse: string;
+    predictedAuthority: string;
+    patch: Partial<SimulationState>;
+  }> = [];
+
+  // Branch 1: What if transaction is turned off?
+  if (sim.transactionActive) {
+    const patchState = { ...sim, transactionActive: false, transactionAmount: 0 };
+    const r = calculateSimulationRisk(patchState).finalRisk;
+    const resp = evaluateSecurityResponse(patchState, r);
+    list.push({
+      title: 'IF TRANSACTION BECOMES INACTIVE',
+      condition: 'Disable active financial wire dispatch',
+      predictedRisk: r,
+      predictedResponse: resp.recommendedAction.replace(/_/g, ' '),
+      predictedAuthority: 'NO APPROVAL REQUIRED',
+      patch: { transactionActive: false, transactionAmount: 0 },
+    });
+  }
+
+  // Branch 2: What if context is verified?
+  if (!sim.contextVerified) {
+    const patchState = { ...sim, contextVerified: true };
+    const r = calculateSimulationRisk(patchState).finalRisk;
+    const resp = evaluateSecurityResponse(patchState, r);
+    const gov = evaluateTransactionGovernance(patchState.transactionAmount, patchState.transactionActive, patchState.standardLimit);
+    list.push({
+      title: 'IF CONTEXT IS VERIFIED',
+      condition: 'Valid change ticket #CHG-2026-881 attached (-15 pts)',
+      predictedRisk: r,
+      predictedResponse: resp.recommendedAction.replace(/_/g, ' '),
+      predictedAuthority: gov.authorityTitle,
+      patch: { contextVerified: true },
+    });
+  }
+
+  // Branch 3: What if privilege change is removed?
+  if (sim.privilegeChange) {
+    const patchState = { ...sim, privilegeChange: false };
+    const r = calculateSimulationRisk(patchState).finalRisk;
+    const resp = evaluateSecurityResponse(patchState, r);
+    const gov = evaluateTransactionGovernance(patchState.transactionAmount, patchState.transactionActive, patchState.standardLimit);
+    list.push({
+      title: 'IF PRIVILEGE CHANGE IS REMOVED',
+      condition: 'Revert 5× limit increase to normal role ceiling',
+      predictedRisk: r,
+      predictedResponse: resp.recommendedAction.replace(/_/g, ' '),
+      predictedAuthority: gov.authorityTitle,
+      patch: { privilegeChange: false },
+    });
+  }
+
+  // Branch 4: What if transaction is reduced to standard limit?
+  if (sim.transactionAmount > sim.standardLimit) {
+    const patchState = { ...sim, transactionAmount: 75000 };
+    const r = calculateSimulationRisk(patchState).finalRisk;
+    const resp = evaluateSecurityResponse(patchState, r);
+    list.push({
+      title: 'IF TRANSACTION WITHIN LIMIT (≤ ₹1L)',
+      condition: 'Reduce wire amount to ₹75,000',
+      predictedRisk: r,
+      predictedResponse: resp.recommendedAction.replace(/_/g, ' '),
+      predictedAuthority: 'STANDARD PROCESSING',
+      patch: { transactionAmount: 75000 },
+    });
+  }
+
+  return list;
 }
