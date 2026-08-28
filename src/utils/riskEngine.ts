@@ -36,13 +36,13 @@ export function getRiskColor(score: number): string {
   const level = getRiskLevel(score);
   switch (level) {
     case 'LOW':
-      return 'text-green-400';
+      return 'text-[#5F8669]';
     case 'MEDIUM':
-      return 'text-yellow-400';
+      return 'text-[#C19A5A]';
     case 'HIGH':
-      return 'text-orange-400';
+      return 'text-[#B67842]';
     case 'CRITICAL':
-      return 'text-red-400';
+      return 'text-[#A64444]';
   }
 }
 
@@ -50,13 +50,13 @@ export function getRiskBgColor(score: number): string {
   const level = getRiskLevel(score);
   switch (level) {
     case 'LOW':
-      return 'bg-green-500/10 border-green-500/30 text-green-400';
+      return 'bg-[#5F8669]/10 border-[#5F8669]/30 text-[#5F8669]';
     case 'MEDIUM':
-      return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+      return 'bg-[#C19A5A]/10 border-[#C19A5A]/30 text-[#C19A5A]';
     case 'HIGH':
-      return 'bg-orange-500/10 border-orange-500/30 text-orange-400';
+      return 'bg-[#B67842]/10 border-[#B67842]/30 text-[#B67842]';
     case 'CRITICAL':
-      return 'bg-red-500/10 border-red-500/30 text-red-400';
+      return 'bg-[#A64444]/15 border-[#A64444]/40 text-[#A64444]';
   }
 }
 
@@ -64,17 +64,17 @@ export function getRiskBadgeClass(level: RiskLevel | string): string {
   switch (level) {
     case 'LOW':
     case 'NORMAL':
-      return 'bg-green-500/20 text-green-400 border border-green-500/30';
+      return 'bg-[#5F8669]/15 text-[#5F8669] border border-[#5F8669]/30';
     case 'MEDIUM':
     case 'UNUSUAL':
-      return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+      return 'bg-[#C19A5A]/15 text-[#C19A5A] border border-[#C19A5A]/30';
     case 'HIGH':
     case 'SUSPICIOUS':
-      return 'bg-orange-500/20 text-orange-400 border border-orange-500/30';
+      return 'bg-[#B67842]/15 text-[#B67842] border border-[#B67842]/30';
     case 'CRITICAL':
-      return 'bg-red-500/20 text-red-400 border border-red-500/30';
+      return 'bg-[#A64444]/20 text-[#A64444] border border-[#A64444]/40';
     default:
-      return 'bg-slate-500/20 text-slate-400 border border-slate-500/30';
+      return 'bg-[#292B2D]/40 text-[#9A9A96] border border-[#292B2D]';
   }
 }
 

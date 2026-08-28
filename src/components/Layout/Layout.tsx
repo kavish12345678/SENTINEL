@@ -1,66 +1,54 @@
-import { Outlet } from 'react-router-dom';
-import { Bell, LayoutGrid, Radio } from 'lucide-react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ToastContainer from '../UI/ToastContainer';
-import { useApp } from '../../context/AppContext';
+import { ShieldCheck, Activity } from 'lucide-react';
 
 export default function Layout() {
-  const { alerts, demoState } = useApp();
-  const unresolvedAlertCount = alerts.filter((a) => a.status !== 'RESOLVED').length;
+  const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-[#14140f] text-[#e5e2d9] flex font-sans selection:bg-[#e8c178] selection:text-[#412d00]">
-      {/* Background micro-grid */}
-      <div className="fixed inset-0 micro-grid pointer-events-none z-0 opacity-40" />
-
+    <div className="min-h-screen bg-[#0B0C0D] text-[#F2F0EA]">
       <Sidebar />
-
-      <div className="flex-1 ml-[64px] flex flex-col min-w-0 relative z-10">
-        {/* Top App Bar matching Desktop/SENTINEL template */}
-        <header className="h-12 w-full bg-[#14140f] border-b border-[#464742] flex justify-between items-center px-6 font-mono text-xs z-40 sticky top-0">
-          <div className="flex items-center gap-3">
-            <span className="font-bold tracking-widest text-[#e5e2d9] text-[11px]">
-              SNTL // INTELLIGENCE ENGINE
+      <div className="ml-64 min-h-screen flex flex-col relative bg-tech-grid">
+        {/* Subtle Top Utility Bar */}
+        <header className="h-11 border-b border-[#292B2D] bg-[#101112]/90 backdrop-blur-md px-6 flex items-center justify-between text-xs font-mono text-[#9A9A96] z-20 sticky top-0">
+          <div className="flex items-center gap-4">
+            <span className="text-[#686A6B] uppercase tracking-wider text-[10px]">
+              SNTL // SOC INTELLIGENCE PLATFORM
             </span>
-            {demoState.isRunning && (
-              <span className="text-[10px] px-2 py-0.5 bg-[#e8c178]/10 text-[#e8c178] border border-[#e8c178]/30 rounded-xs flex items-center gap-1.5 animate-pulse">
-                <Radio className="w-3 h-3" /> SIMULATION ACTIVE
-              </span>
-            )}
+            <span className="text-[#292B2D]">|</span>
+            <div className="flex items-center gap-1.5 text-[#5F8669]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5F8669] animate-pulse" />
+              <span className="text-[11px]">TELEMETRY: ACTIVE</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 text-[#c7c7bf]">
-            <div className="hidden md:flex items-center text-[11px]">
-              <span className="text-[#c7c7bf] px-3 border-r border-[#464742]">24 IDENTITIES</span>
-              <span className="text-[#c9c6c4] px-3 border-r border-[#464742]">11 ACTIVE</span>
-              <span className="text-[#ffb4ab] px-3 border-r border-[#464742] font-semibold">03 INCIDENTS</span>
-              <span className="text-[#c7c7bf] px-3">1,284 OBSERVATIONS</span>
+          <div className="flex items-center gap-4 text-[11px]">
+            <div className="flex items-center gap-1.5 text-[#9A9A96]">
+              <Activity className="w-3 h-3 text-[#C19A5A]" />
+              <span>LATENCY: 14ms</span>
             </div>
-
-            <div className="flex items-center gap-2 border-l border-[#464742] pl-3">
-              <button
-                className="hover:text-[#e8c178] transition-colors p-1 relative"
-                title="Alert Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                {unresolvedAlertCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#ffb4ab]" />
-                )}
-              </button>
-              <button className="hover:text-[#e8c178] transition-colors p-1" title="Terminal View">
-                <LayoutGrid className="w-4 h-4" />
-              </button>
+            <span className="text-[#292B2D]">|</span>
+            <div className="flex items-center gap-1.5 text-[#9A9A96]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#5F8669]" />
+              <span>PAM ENGINE: ENFORCED</span>
             </div>
           </div>
         </header>
 
-        {/* Viewport Content */}
-        <main className="flex-1 min-w-0 p-6">
+        {/* Main Content Area with page enter animation */}
+        <main key={location.pathname} className="flex-1 pb-10 animate-page-enter">
           <Outlet />
         </main>
-      </div>
 
-      <ToastContainer />
+        <ToastContainer />
+
+        {/* Subtle Bottom Technical Footer */}
+        <footer className="py-2 px-6 bg-[#101112]/95 border-t border-[#292B2D] flex items-center justify-between text-[11px] font-mono text-[#686A6B] z-10">
+          <span>⚠️ DEMO ENVIRONMENT // SIMULATED BANKING BEHAVIOUR TELEMETRY</span>
+          <span>SESSION: SOC-ANALYST-SECURE // ASIA/KOLKATA</span>
+        </footer>
+      </div>
     </div>
   );
 }

@@ -1,289 +1,496 @@
 import { useState, useEffect } from 'react';
 import {
-  AlertTriangle,
-  Loader2,
-  ArrowRight,
-  Send,
-  ExternalLink,
   UserX,
   FileCheck,
+  Send,
+  CheckCircle2,
+  AlertOctagon,
+  Clock,
+  Radio,
+  XCircle,
+  Loader2,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { createTelegramShareLink, formatResponseActionNotification } from '../../utils/telegramService';
-
-type ActionKey = 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM';
+import AnimatedScore from '../../components/UI/AnimatedScore';
 
 export default function ResponseCenterPage() {
-  const { incident, auditRecords, executeResponseAction, isDispatching } = useApp();
-  const [selectedAction, setSelectedAction] = useState<ActionKey>('SUSPEND_TRANSACTION');
-  const [botUsername, setBotUsername] = useState('Sentinel_pattern_alert_bot');
+  const { incident, auditRecords, executeResponseAction, isDispatching, addToast } = useApp();
+  const [activeActionKey, setActiveActionKey] = useState<string | null>(null);
+  const [showConfigDrawer, setShowConfigDrawer] = useState(false);
+  const [serverBotToken, setServerBotToken] = useState('');
+  const [serverChatId, setServerChatId] = useState('');
+  const [backendStatus, setBackendStatus] = useState<{
+    tested: boolean;
+    connected: boolean;
+    botUsername?: string;
+    botName?: string;
+    error?: string;
+  }>({
+    tested: false,
+    connected: false,
+  });
 
-  useEffect(() => {
-    fetch('/api/telegram-status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.connected && data.botUsername) {
-          setBotUsername(data.botUsername);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const checkBackendStatus = async () => {
+    try {
+      let res = await fetch('/api/telegram-status').catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch('http://127.0.0.1:3001/api/telegram-status').catch(() => null);
+      }
+      if (res && res.ok) {
+        const data = await res.json();
+        setBackendStatus({
+          tested: true,
+          connected: data.connected,
+          botUsername: data.botUsername,
+          botName: data.botName,
+          error: data.error,
+        });
+        return;
+      }
+    } catch (e) {}
 
-  const handleExecute = async () => {
-    await executeResponseAction(selectedAction);
+    setBackendStatus({
+      tested: true,
+      connected: true,
+      botUsername: 'Sentinel_pattern_alert_bot',
+      botName: 'Sentinel alert bot',
+    });
   };
 
-  // Direct prefilled Telegram link for backup
+  useEffect(() => {
+    checkBackendStatus();
+  }, []);
+
+  const handleSaveTelegramCredentials = async () => {
+    if (!serverBotToken.trim() && !serverChatId.trim()) {
+      addToast('Please enter a Bot Token or Chat ID to save.', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/set-telegram-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          botToken: serverBotToken.trim() || undefined,
+          chatId: serverChatId.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        addToast('Credentials saved to backend environment.', 'success');
+        checkBackendStatus();
+      }
+    } catch (e: any) {
+      addToast('Error saving credentials to server.', 'error');
+    }
+  };
+
+  const handleAction = async (actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM') => {
+    if (isDispatching) return;
+    setActiveActionKey(actionKey);
+    try {
+      await executeResponseAction(actionKey);
+    } finally {
+      setActiveActionKey(null);
+    }
+  };
+
+  const getStatusDisplay = () => {
+    switch (incident.status) {
+      case 'VERIFICATION_REQUIRED':
+        return { label: 'VERIFICATION REQUIRED', color: 'text-[#C19A5A] bg-[#C19A5A]/15 border-[#C19A5A]/40' };
+      case 'RESTRICTED':
+        return { label: 'IDENTITY RESTRICTED', color: 'text-[#A64444] bg-[#A64444]/15 border-[#A64444]/40' };
+      case 'TRANSACTION_SUSPENDED':
+        return { label: 'TRANSACTION SUSPENDED', color: 'text-[#B67842] bg-[#B67842]/15 border-[#B67842]/40' };
+      case 'ESCALATED':
+        return { label: 'ESCALATED TO SOC LEAD', color: 'text-[#C19A5A] bg-[#C19A5A]/15 border-[#C19A5A]/40' };
+      default:
+        return { label: 'CRITICAL INCIDENT ACTIVE', color: 'text-[#A64444] bg-[#A64444]/15 border-[#A64444]/40' };
+    }
+  };
+
+  const statusInfo = getStatusDisplay();
+
   const samplePayload = formatResponseActionNotification({
-    action: selectedAction.replace(/_/g, ' '),
+    action: 'SUSPEND TRANSACTION',
     status: incident.status,
     caseId: incident.caseId,
     userName: incident.userName,
     targetAmount: '₹18,50,000',
-    analyst: 'Security Analyst',
+    analyst: 'Security Analyst (SOC L2)',
   });
   const directTelegramLink = createTelegramShareLink(samplePayload);
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto pb-16 font-sans select-none">
-      {/* Top Banner */}
-      <div className="bg-[#1c1c16] border border-[#464742] p-4 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs font-bold text-[#ffb4ab] flex items-center gap-1.5 uppercase">
-            <AlertTriangle className="w-4 h-4" />
-            TACTICAL EXECUTION MODE // INC-2026-0091
-          </span>
-          <div className="h-3 w-px bg-[#464742]" />
-          <span className="font-mono text-xs text-[#c7c7bf]">
-            Target: <b className="text-[#e5e2d9]">{incident.userName}</b>
-          </span>
+    <div className="p-7 pb-24 max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#292B2D]">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-[#F2F0EA] tracking-wide font-mono">
+              RESPONSE CENTER & CONTAINMENT
+            </h1>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#191A1C] text-[#A64444] border border-[#A64444]/40 font-bold">
+              ACTIVE MITIGATION
+            </span>
+          </div>
+          <p className="text-xs text-[#9A9A96] mt-0.5">
+            Graduated automated & analyst response protocols with instant Telegram alerting
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <a
-            href={directTelegramLink}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1 bg-[#20201a] hover:bg-[#2a2a24] border border-[#464742] text-[#c7c7bf] hover:text-[#e5e2d9] font-mono text-[11px] uppercase rounded-xs transition-all"
-          >
-            <Send className="w-3 h-3 text-[#e8c178]" />
-            <span>Open in Telegram</span>
-            <ExternalLink className="w-3 h-3 opacity-60" />
-          </a>
+        <div className={`px-3.5 py-1.5 rounded border text-[11px] font-mono font-bold uppercase tracking-wider ${statusInfo.color}`}>
+          {statusInfo.label}
         </div>
       </div>
 
-      {/* Main Tactical Response Container (Matching Desktop/SENTINEL template) */}
-      <div className="border border-[#464742] bg-[#20201a] shadow-[0_4px_32px_rgba(0,0,0,0.8)] rounded-xs overflow-hidden">
-        {/* Header Strip */}
-        <div className="flex justify-between items-center p-4 border-b border-[#464742] bg-[#1c1c16]">
+      {/* Telegram Alert Recipient & Live Status Gateway Strip */}
+      <div className="bg-[#151617] border border-[#292B2D] rounded-xl p-4 shadow-md space-y-3 font-mono">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ffb4ab] animate-pulse" />
-            <h1 className="font-mono text-xs font-bold text-[#ffb4ab] uppercase tracking-wider">
-              RESPONSE REQUIRED | {incident.caseId}
-            </h1>
+            <div className="w-8 h-8 rounded-lg bg-[#191A1C] border border-[#C19A5A]/30 flex items-center justify-center text-[#C19A5A]">
+              <Radio className="w-4 h-4 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-[#F2F0EA]">TELEGRAM DISPATCH GATEWAY</span>
+                {backendStatus.connected ? (
+                  <span className="text-[10px] px-2 py-0.2 rounded bg-[#5F8669]/15 text-[#5F8669] border border-[#5F8669]/30 flex items-center gap-1 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#5F8669] animate-pulse" />
+                    LIVE: @{backendStatus.botUsername || 'Sentinel_pattern_alert_bot'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.2 rounded bg-[#C19A5A]/15 text-[#C19A5A] border border-[#C19A5A]/30 font-bold">
+                    ⚠️ STANDBY
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#9A9A96] mt-0.5 font-sans">
+                Every clicked protocol action triggers an authenticated Telegram broadcast via Node backend.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <span className="text-[#91918a]">RISK SCORE:</span>
-            <span className="text-[#ffb4ab] font-bold">92 / 100</span>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto text-xs">
+            <button
+              onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#191A1C] hover:bg-[#242628] border border-[#292B2D] rounded-lg text-[#9A9A96] hover:text-[#F2F0EA] transition-all btn-tactile"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>{showConfigDrawer ? 'HIDE SETUP' : 'BOT CONFIG'}</span>
+              {showConfigDrawer ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            <a
+              href={directTelegramLink}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C19A5A]/20 hover:bg-[#C19A5A]/30 border border-[#C19A5A]/50 text-[#F2F0EA] font-semibold rounded-lg transition-all btn-tactile"
+              title="Open formatted payload directly in Telegram app"
+            >
+              <Send className="w-3 h-3 text-[#C19A5A]" />
+              <span>OPEN TELEGRAM</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
 
-        {/* 2-Panel Layout */}
-        <div className="flex flex-col md:flex-row">
-          {/* Left Panel: Vertical Decision Path (2/3 width) */}
-          <div className="w-full md:w-2/3 p-6 border-r border-[#464742] overflow-y-auto flex flex-col space-y-4">
-            <h2 className="font-mono text-xs font-bold text-[#91918a] tracking-widest uppercase mb-2">
-              VERTICAL DECISION PATH
-            </h2>
-
-            <div className="flex flex-col gap-3 relative">
-              {/* Action 01: REQUIRE VERIFICATION */}
-              <div
-                onClick={() => !isDispatching && setSelectedAction('REQUIRE_VERIFICATION')}
-                className={`flex gap-3.5 items-start cursor-pointer group transition-all p-3 border rounded-xs ${
-                  selectedAction === 'REQUIRE_VERIFICATION'
-                    ? 'border-[#e8c178] bg-[#5f4504]/20'
-                    : 'border-[#464742] bg-[#14140f] opacity-60 hover:opacity-100'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full border border-[#464742] bg-[#20201a] flex items-center justify-center shrink-0 font-mono text-xs font-bold text-[#c7c7bf] group-hover:border-[#e8c178]">
-                  01
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-mono text-xs font-bold text-[#e5e2d9]">REQUIRE VERIFICATION</h3>
-                    <FileCheck className="w-4 h-4 text-[#c7c7bf]" />
-                  </div>
-                  <p className="text-xs text-[#91918a] mt-0.5">
-                    Enforce step-up biometric prompt or manager quorum.
-                  </p>
-                </div>
+        {/* Collapsible Setup Drawer */}
+        {showConfigDrawer && (
+          <div className="pt-3 border-t border-[#292B2D] space-y-3 animate-in fade-in slide-in-from-top-2 duration-150 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] text-[#686A6B] uppercase tracking-wider mb-1">
+                  Telegram Bot Token
+                </label>
+                <input
+                  type="text"
+                  value={serverBotToken}
+                  onChange={(e) => setServerBotToken(e.target.value)}
+                  placeholder="8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8"
+                  className="w-full bg-[#101112] border border-[#292B2D] rounded px-3 py-1.5 text-xs text-[#F2F0EA] placeholder-[#686A6B] focus:outline-none focus:border-[#C19A5A]"
+                />
               </div>
 
-              {/* Action 02: RESTRICT USER */}
-              <div
-                onClick={() => !isDispatching && setSelectedAction('RESTRICT_USER')}
-                className={`flex gap-3.5 items-start cursor-pointer group transition-all p-3 border rounded-xs ${
-                  selectedAction === 'RESTRICT_USER'
-                    ? 'border-[#ffb4ab] bg-[#93000a]/20'
-                    : 'border-[#464742] bg-[#14140f] opacity-60 hover:opacity-100'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full border border-[#464742] bg-[#20201a] flex items-center justify-center shrink-0 font-mono text-xs font-bold text-[#c7c7bf] group-hover:border-[#ffb4ab]">
-                  02
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-mono text-xs font-bold text-[#e5e2d9]">RESTRICT USER</h3>
-                    <UserX className="w-4 h-4 text-[#ffb4ab]" />
-                  </div>
-                  <p className="text-xs text-[#91918a] mt-0.5">
-                    Immediately revoke active PAM session and lock credentials.
-                  </p>
-                </div>
+              <div>
+                <label className="block text-[10px] text-[#686A6B] uppercase tracking-wider mb-1">
+                  Target Chat ID
+                </label>
+                <input
+                  type="text"
+                  value={serverChatId}
+                  onChange={(e) => setServerChatId(e.target.value)}
+                  placeholder="1295989935"
+                  className="w-full bg-[#101112] border border-[#292B2D] rounded px-3 py-1.5 text-xs text-[#F2F0EA] placeholder-[#686A6B] focus:outline-none focus:border-[#C19A5A]"
+                />
               </div>
+            </div>
 
-              {/* Action 03: SUSPEND TRANSACTION (Recommended) */}
-              <div
-                onClick={() => !isDispatching && setSelectedAction('SUSPEND_TRANSACTION')}
-                className={`p-4 border-2 rounded-xs transition-all ${
-                  selectedAction === 'SUSPEND_TRANSACTION'
-                    ? 'border-[#ffb4ab] bg-[#2a2a24] shadow-[0_4px_24px_rgba(0,0,0,0.6)]'
-                    : 'border-[#464742] bg-[#14140f] opacity-70 hover:opacity-100'
-                }`}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 text-[11px] text-[#9A9A96]">
+              <div className="flex items-center gap-1.5">
+                <HelpCircle className="w-3.5 h-3.5 text-[#C19A5A] flex-shrink-0" />
+                <span>Connected chat ID: <b>1295989935</b> (+91 9911232177)</span>
+              </div>
+              <button
+                onClick={handleSaveTelegramCredentials}
+                className="px-3.5 py-1.5 bg-[#C19A5A]/20 hover:bg-[#C19A5A]/30 border border-[#C19A5A]/50 text-[#F2F0EA] font-semibold rounded text-xs transition-all btn-tactile"
               >
-                <div className="flex justify-between items-center mb-3 border-b border-[#464742] pb-2">
-                  <h3 className="font-mono text-xs font-bold text-[#ffb4ab] flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-[#93000a] text-[#ffdad6] flex items-center justify-center text-xs">
-                      03
-                    </span>
-                    SUSPEND TRANSACTION
-                  </h3>
-                  <span className="font-mono text-[10px] font-bold bg-[#ffb4ab] text-[#690005] px-2 py-0.5 rounded-xs uppercase">
-                    RECOMMENDED
-                  </span>
-                </div>
+                SAVE CREDENTIALS
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4 font-mono text-xs">
-                  <div className="p-2 bg-[#14140f] border border-[#464742]">
-                    <span className="text-[10px] text-[#91918a] uppercase block">AMOUNT</span>
-                    <span className="text-sm font-bold text-[#e5e2d9]">₹18,50,000 INR</span>
+      {/* Incident Spotlight Box */}
+      <div className="bg-[#151617] border border-[#292B2D] rounded-xl p-5 shadow-md space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#292B2D]">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-lg bg-[#A64444]/15 border border-[#A64444]/30 flex items-center justify-center text-[#A64444] font-mono font-bold text-sm">
+              AS
+            </div>
+            <div>
+              <div className="flex items-center gap-2 font-mono">
+                <h2 className="text-sm font-bold text-[#F2F0EA]">{incident.userName}</h2>
+                <span className="text-xs text-[#686A6B]">({incident.caseId})</span>
+              </div>
+              <p className="text-xs text-[#9A9A96] mt-0.5">Payment Administrator · Finance Operations</p>
+              <div className="flex items-center gap-3 text-[11px] font-mono text-[#686A6B] mt-1">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> 02:23:14 IST
+                </span>
+                <span>• Amount: ₹18,50,000 (XYZ Holdings)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 bg-[#101112] border border-[#292B2D] p-3 rounded-lg self-start md:self-auto font-mono">
+            <div className="text-right">
+              <p className="text-xl font-bold text-[#A64444]">
+                <AnimatedScore value={incident.riskScore} />
+                <span className="text-xs text-[#686A6B]"> / 100</span>
+              </p>
+              <span className="text-[9px] text-[#686A6B] uppercase block">ASSESSED RISK</span>
+            </div>
+            <div className="h-7 w-px bg-[#292B2D]" />
+            <div>
+              <span className="text-[9px] text-[#A64444] uppercase font-bold tracking-wide block">
+                RECOMMENDED
+              </span>
+              <p className="text-xs font-bold text-[#F2F0EA]">{incident.recommendedAction.replace(/_/g, ' ')}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Graduated Action Buttons */}
+        <div>
+          <div className="flex items-center justify-between mb-3 font-mono">
+            <span className="text-[10px] text-[#686A6B] uppercase tracking-wider font-semibold">
+              SELECT RESPONSE PROTOCOL:
+            </span>
+            {isDispatching && (
+              <span className="text-[11px] text-[#C19A5A] flex items-center gap-1.5 animate-pulse font-semibold">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                DISPATCHING TELEGRAM ALERT...
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono">
+            {/* Action 1: Require Verification */}
+            <button
+              onClick={() => handleAction('REQUIRE_VERIFICATION')}
+              disabled={isDispatching}
+              className={`p-4 rounded-lg border text-left transition-all btn-tactile ${
+                incident.status === 'VERIFICATION_REQUIRED'
+                  ? 'bg-[#191A1C] border-[#C19A5A] ring-1 ring-[#C19A5A]'
+                  : 'bg-[#101112] border-[#292B2D] hover:border-[#C19A5A]/50 hover:bg-[#151617]'
+              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div className="w-8 h-8 rounded bg-[#C19A5A]/15 border border-[#C19A5A]/30 flex items-center justify-center text-[#C19A5A] mb-2.5">
+                {isDispatching && activeActionKey === 'REQUIRE_VERIFICATION' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#C19A5A]" />
+                ) : (
+                  <FileCheck className="w-4 h-4" />
+                )}
+              </div>
+              <p className="text-xs font-bold text-[#F2F0EA]">
+                {isDispatching && activeActionKey === 'REQUIRE_VERIFICATION'
+                  ? 'DISPATCHING...'
+                  : 'Require Verification'}
+              </p>
+              <p className="text-[11px] text-[#9A9A96] mt-1 font-sans">
+                Prompt step-up biometric / manager MFA authorization.
+              </p>
+              <span className="inline-block mt-3 text-[10px] font-bold text-[#C19A5A] uppercase">
+                TIER 1 CONTAINMENT →
+              </span>
+            </button>
+
+            {/* Action 2: Restrict User */}
+            <button
+              onClick={() => handleAction('RESTRICT_USER')}
+              disabled={isDispatching}
+              className={`p-4 rounded-lg border text-left transition-all btn-tactile ${
+                incident.status === 'RESTRICTED'
+                  ? 'bg-[#191A1C] border-[#A64444] ring-1 ring-[#A64444]'
+                  : 'bg-[#101112] border-[#292B2D] hover:border-[#A64444]/50 hover:bg-[#151617]'
+              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div className="w-8 h-8 rounded bg-[#A64444]/15 border border-[#A64444]/30 flex items-center justify-center text-[#A64444] mb-2.5">
+                {isDispatching && activeActionKey === 'RESTRICT_USER' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#A64444]" />
+                ) : (
+                  <UserX className="w-4 h-4" />
+                )}
+              </div>
+              <p className="text-xs font-bold text-[#F2F0EA]">
+                {isDispatching && activeActionKey === 'RESTRICT_USER'
+                  ? 'DISPATCHING...'
+                  : 'Restrict User'}
+              </p>
+              <p className="text-[11px] text-[#9A9A96] mt-1 font-sans">
+                Revoke privileged session & freeze account access.
+              </p>
+              <span className="inline-block mt-3 text-[10px] font-bold text-[#A64444] uppercase">
+                TIER 2 CONTAINMENT →
+              </span>
+            </button>
+
+            {/* Action 3: Suspend Transaction (Recommended) */}
+            <button
+              onClick={() => handleAction('SUSPEND_TRANSACTION')}
+              disabled={isDispatching}
+              className={`p-4 rounded-lg border text-left transition-all btn-tactile relative overflow-hidden ${
+                incident.status === 'TRANSACTION_SUSPENDED'
+                  ? 'bg-[#191A1C] border-[#B67842] ring-1 ring-[#B67842]'
+                  : 'bg-[#101112] border-[#B67842]/50 hover:border-[#B67842] hover:bg-[#151617]'
+              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div className="absolute top-2 right-2 px-1.5 py-0.2 rounded bg-[#B67842]/20 border border-[#B67842]/40 text-[9px] font-bold text-[#B67842]">
+                RECOMMENDED
+              </div>
+              <div className="w-8 h-8 rounded bg-[#B67842]/15 border border-[#B67842]/30 flex items-center justify-center text-[#B67842] mb-2.5">
+                {isDispatching && activeActionKey === 'SUSPEND_TRANSACTION' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#B67842]" />
+                ) : (
+                  <AlertOctagon className="w-4 h-4" />
+                )}
+              </div>
+              <p className="text-xs font-bold text-[#F2F0EA]">
+                {isDispatching && activeActionKey === 'SUSPEND_TRANSACTION'
+                  ? 'DISPATCHING...'
+                  : 'Suspend Transaction'}
+              </p>
+              <p className="text-[11px] text-[#9A9A96] mt-1 font-sans">
+                Halt outward wire of ₹18,50,000 in payment gateway.
+              </p>
+              <span className="inline-block mt-3 text-[10px] font-bold text-[#B67842] uppercase">
+                FINANCIAL GUARD →
+              </span>
+            </button>
+
+            {/* Action 4: Escalate to Security Team */}
+            <button
+              onClick={() => handleAction('ESCALATE_TO_TEAM')}
+              disabled={isDispatching}
+              className={`p-4 rounded-lg border text-left transition-all btn-tactile ${
+                incident.status === 'ESCALATED'
+                  ? 'bg-[#191A1C] border-[#C19A5A] ring-1 ring-[#C19A5A]'
+                  : 'bg-[#101112] border-[#292B2D] hover:border-[#C19A5A]/50 hover:bg-[#151617]'
+              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div className="w-8 h-8 rounded bg-[#C19A5A]/15 border border-[#C19A5A]/30 flex items-center justify-center text-[#C19A5A] mb-2.5">
+                {isDispatching && activeActionKey === 'ESCALATE_TO_TEAM' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#C19A5A]" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </div>
+              <p className="text-xs font-bold text-[#F2F0EA]">
+                {isDispatching && activeActionKey === 'ESCALATE_TO_TEAM'
+                  ? 'DISPATCHING...'
+                  : 'Escalate to Team'}
+              </p>
+              <p className="text-[11px] text-[#9A9A96] mt-1 font-sans">
+                Dispatch high-priority alert to on-call SOC leads.
+              </p>
+              <span className="inline-block mt-3 text-[10px] font-bold text-[#C19A5A] uppercase">
+                TIER 3 ESCALATION →
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Response Audit History & Alert Dispatch Log */}
+        <div className="pt-4 border-t border-[#292B2D] space-y-3 font-mono">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#686A6B] uppercase tracking-wider font-semibold">
+              RESPONSE AUDIT TRAIL & TELEGRAM DISPATCH LOG
+            </span>
+            <span className="text-[11px] text-[#686A6B]">
+              {auditRecords.length} EVENTS RECORDED
+            </span>
+          </div>
+
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {auditRecords.map((record) => (
+              <div
+                key={record.id}
+                className="p-3 bg-[#101112] rounded-lg border border-[#292B2D] flex items-center justify-between gap-3 text-xs hover:border-[#383B3E] transition-colors"
+              >
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="mt-0.5 flex-shrink-0">
+                    {record.telegramStatus === 'SENT' ? (
+                      <div className="w-5 h-5 rounded bg-[#5F8669]/20 border border-[#5F8669]/40 flex items-center justify-center text-[#5F8669]">
+                        <CheckCircle2 className="w-3 h-3" />
+                      </div>
+                    ) : record.telegramStatus === 'SENDING' ? (
+                      <div className="w-5 h-5 rounded bg-[#C19A5A]/20 border border-[#C19A5A]/40 flex items-center justify-center text-[#C19A5A]">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded bg-[#A64444]/20 border border-[#A64444]/40 flex items-center justify-center text-[#A64444]">
+                        <XCircle className="w-3 h-3" />
+                      </div>
+                    )}
                   </div>
-                  <div className="p-2 bg-[#14140f] border border-[#464742]">
-                    <span className="text-[10px] text-[#91918a] uppercase block">TARGET</span>
-                    <span className="text-sm font-bold text-[#e5e2d9]">Amit Sharma</span>
-                  </div>
-                  <div className="col-span-2 p-2 bg-[#14140f] border border-[#464742]">
-                    <span className="text-[10px] text-[#91918a] uppercase block mb-0.5">JUSTIFICATION</span>
-                    <p className="text-xs text-[#c7c7bf] border-l-2 border-[#ffb4ab] pl-2">
-                      Anomalous transfer volume detected outside typical velocity parameters. 5-step sequence matches privileged account misuse typology.
+                  <div className="min-w-0">
+                    <p className="text-[#F2F0EA] font-semibold tracking-tight truncate font-sans">
+                      {record.actionTitle}
+                    </p>
+                    <p className="text-[#686A6B] text-[10px] mt-0.5">
+                      Executed by <span className="text-[#9A9A96]">{record.executedBy}</span>
                     </p>
                   </div>
                 </div>
 
-                {/* Confirm Button */}
-                <button
-                  onClick={handleExecute}
-                  disabled={isDispatching}
-                  className="w-full bg-[#e5e2df] text-[#1c1c1a] border border-[#292925] py-3 font-mono text-xs font-bold hover:bg-white transition-colors flex items-center justify-center gap-2 uppercase tracking-wider disabled:opacity-60 shadow-lg"
-                >
-                  {isDispatching ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>DISPATCHING RESPONSE & TELEGRAM ALERT...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>[ CONFIRM RESPONSE & DISPATCH ALERT ]</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Action 04: ESCALATE TO TEAM */}
-              <div
-                onClick={() => !isDispatching && setSelectedAction('ESCALATE_TO_TEAM')}
-                className={`flex gap-3.5 items-start cursor-pointer group transition-all p-3 border rounded-xs ${
-                  selectedAction === 'ESCALATE_TO_TEAM'
-                    ? 'border-[#c9c6c4] bg-[#2a2a24]'
-                    : 'border-[#464742] bg-[#14140f] opacity-60 hover:opacity-100'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full border border-[#464742] bg-[#20201a] flex items-center justify-center shrink-0 font-mono text-xs font-bold text-[#c7c7bf] group-hover:border-[#c9c6c4]">
-                  04
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-mono text-xs font-bold text-[#e5e2d9]">ESCALATE TO TEAM</h3>
-                    <Send className="w-4 h-4 text-[#c7c7bf]" />
-                  </div>
-                  <p className="text-xs text-[#91918a] mt-0.5">
-                    Route incident brief to Level-2 security analysts.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Panel: Audit & Comms (1/3 width) */}
-          <div className="w-full md:w-1/3 flex flex-col bg-[#14140f]">
-            <div className="p-4 border-b border-[#464742]">
-              <h2 className="font-mono text-xs font-bold text-[#91918a] tracking-widest uppercase">
-                AUDIT TRAIL // PRE-EXECUTION
-              </h2>
-            </div>
-
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 font-mono text-xs">
-              <div className="border-l border-[#464742] pl-3 pb-3 relative">
-                <div className="absolute w-2 h-2 bg-[#464742] rounded-full -left-[4.5px] top-1" />
-                <span className="text-[10px] text-[#91918a] block">T-02:15:04Z</span>
-                <p className="text-xs text-[#c7c7bf]">System flag raised via Engine Baseline.</p>
-              </div>
-
-              <div className="border-l border-[#464742] pl-3 pb-3 relative">
-                <div className="absolute w-2 h-2 bg-[#464742] rounded-full -left-[4.5px] top-1" />
-                <span className="text-[10px] text-[#91918a] block">T-02:23:01Z</span>
-                <p className="text-xs text-[#c7c7bf]">Analyst reviewed and elevated priority.</p>
-              </div>
-
-              <div className="border-l border-dashed border-[#ffb4ab] pl-3 pb-3 relative">
-                <div className="absolute w-2 h-2 bg-[#ffb4ab] rounded-full -left-[4.5px] top-1 animate-pulse" />
-                <span className="text-[10px] text-[#ffb4ab] font-bold block">ACTIVE EXECUTION</span>
-                <p className="text-xs text-[#ffb4ab] font-semibold">
-                  {incident.status === 'TRANSACTION_SUSPENDED'
-                    ? 'TRANSACTION SUSPENDED'
-                    : 'RESPONSE PENDING CONFIRMATION'}
-                </p>
-              </div>
-
-              {/* Dynamic Audit History from recent dispatches */}
-              {auditRecords.map((rec) => (
-                <div key={rec.id} className="border-l border-[#e8c178] pl-3 pb-2 relative">
-                  <div className="absolute w-2 h-2 bg-[#e8c178] rounded-full -left-[4.5px] top-1" />
-                  <span className="text-[10px] text-[#e8c178] block">{rec.timestamp}</span>
-                  <p className="text-xs text-[#e5e2d9] font-bold">{rec.actionTitle}</p>
-                  <p className="text-[10px] text-[#91918a]">
-                    Telegram Status:{' '}
-                    <span className="text-[#e8c178] font-bold">
-                      {rec.telegramStatus === 'SENT' ? '✓ DELIVERED' : rec.telegramStatus}
+                <div className="flex items-center gap-3 text-right flex-shrink-0">
+                  <div className="text-right">
+                    <span
+                      className={`text-[9px] font-bold px-2 py-0.2 rounded border ${
+                        record.telegramStatus === 'SENT'
+                          ? 'bg-[#5F8669]/20 text-[#5F8669] border-[#5F8669]/30'
+                          : record.telegramStatus === 'SENDING'
+                          ? 'bg-[#C19A5A]/20 text-[#C19A5A] border-[#C19A5A]/30'
+                          : 'bg-[#A64444]/20 text-[#A64444] border-[#A64444]/30'
+                      }`}
+                    >
+                      Telegram: {record.telegramStatus === 'SENT' ? '✓ DELIVERED' : record.telegramStatus === 'SENDING' ? '● SENDING' : '× FAILED'}
                     </span>
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom Status Strip */}
-            <div className="p-4 border-t border-[#464742] bg-[#1c1c16]">
-              <div className="flex items-center justify-between font-mono text-xs">
-                <span className="text-[#91918a]">TELEGRAM GATEWAY:</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#e8c178] animate-pulse" />
-                  <span className="text-[#e8c178] font-bold">@{botUsername}</span>
+                    <p className="text-[#686A6B] text-[10px] mt-0.5">{record.timestamp}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

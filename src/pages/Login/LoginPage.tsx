@@ -1,115 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useApp();
-  const [operatorId, setOperatorId] = useState('');
-  const [accessKey, setAccessKey] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Animated Node Network Canvas from intelligence_entrance/code.html
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', handleResize);
-
-    const nodes: Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      radius: number;
-    }> = [];
-
-    const numNodes = Math.floor((width * height) / 25000);
-    for (let i = 0; i < numNodes; i++) {
-      nodes.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 1.5 + 0.5,
-      });
-    }
-
-    const threatNodeIndex = Math.floor(Math.random() * nodes.length);
-    let threatIntensity = 0;
-    let animId: number;
-
-    const draw = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      if (threatIntensity < 1) threatIntensity += 0.003;
-
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i < nodes.length; i++) {
-        const nodeA = nodes[i];
-        nodeA.x += nodeA.vx;
-        nodeA.y += nodeA.vy;
-
-        if (nodeA.x < 0 || nodeA.x > width) nodeA.vx *= -1;
-        if (nodeA.y < 0 || nodeA.y > height) nodeA.vy *= -1;
-
-        for (let j = i + 1; j < nodes.length; j++) {
-          const nodeB = nodes[j];
-          const dx = nodeA.x - nodeB.x;
-          const dy = nodeA.y - nodeB.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 140) {
-            ctx.beginPath();
-            if (i === threatNodeIndex || j === threatNodeIndex) {
-              ctx.strokeStyle = `rgba(129, 38, 39, ${((140 - dist) / 140) * threatIntensity * 0.6})`;
-            } else {
-              ctx.strokeStyle = `rgba(70, 71, 66, ${((140 - dist) / 140) * 0.4})`;
-            }
-            ctx.moveTo(nodeA.x, nodeA.y);
-            ctx.lineTo(nodeB.x, nodeB.y);
-            ctx.stroke();
-          }
-        }
-      }
-
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-
-        if (i === threatNodeIndex) {
-          ctx.fillStyle = '#c45855';
-          const pulse = Math.sin(Date.now() * 0.003) * 1.5 * threatIntensity;
-          ctx.arc(node.x, node.y, node.radius + pulse, 0, Math.PI * 2);
-        } else {
-          ctx.fillStyle = '#464742';
-        }
-        ctx.fill();
-      }
-
-      animId = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animId);
-    };
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,88 +29,122 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="bg-[#0b0b0a] text-[#e5e2d9] h-screen w-screen overflow-hidden relative select-none font-sans">
-      {/* Node Canvas */}
-      <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-50" />
+    <div className="min-h-screen bg-[#0B0C0D] text-[#F2F0EA] flex items-center justify-center p-4 relative overflow-hidden bg-tech-grid">
+      <div className="relative w-full max-w-md animate-page-enter">
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-[#151617] border border-[#C19A5A]/30 rounded-xl mb-4 text-[#C19A5A]">
+            <Shield className="w-7 h-7" />
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <h1 className="text-2xl font-bold tracking-widest text-[#F2F0EA] font-mono">SENTINEL</h1>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#191A1C] text-[#C19A5A] border border-[#292B2D]">
+              ENTERPRISE
+            </span>
+          </div>
+          <p className="text-[#9A9A96] text-xs mt-1.5 font-mono">
+            PRIVILEGED BEHAVIOURAL INTELLIGENCE ENGINE
+          </p>
+        </div>
 
-      {/* Main Form Box */}
-      <main className="relative z-10 h-full w-full flex flex-col items-center justify-center px-6">
-        {/* Header */}
-        <header className="text-center mb-12">
-          <h1 className="font-mono text-3xl md:text-4xl font-bold tracking-[0.2em] text-[#e5e2d9] mb-2">
-            SENTINEL
-          </h1>
-          <h2 className="font-mono text-xs tracking-[0.25em] text-[#c7c7bf] uppercase">
-            PRIVILEGED BEHAVIOUR INTELLIGENCE
-          </h2>
-        </header>
-
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="w-full max-w-sm flex flex-col gap-6">
-          <div className="relative group">
-            <input
-              type="text"
-              id="operator_id"
-              required
-              value={operatorId}
-              onChange={(e) => setOperatorId(e.target.value)}
-              placeholder=" "
-              className="w-full bg-transparent border-0 border-b border-[#464742] px-0 py-2 font-mono text-xs text-[#e5e2d9] focus:ring-0 focus:border-[#e5e2d9] transition-colors peer"
-            />
-            <label
-              htmlFor="operator_id"
-              className="absolute left-0 top-2 font-mono text-xs text-[#91918a] transition-all peer-focus:-top-3.5 peer-focus:text-[10px] peer-focus:text-[#e8c178] peer-[:not(:placeholder-shown)]:-top-3.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-[#e8c178] pointer-events-none uppercase tracking-wider"
-            >
-              Operator ID
-            </label>
-            <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#e8c178] transition-all duration-300 peer-focus:w-full" />
+        {/* Login Container */}
+        <div className="bg-[#151617] border border-[#292B2D] rounded-xl p-7 shadow-[0_16px_40px_rgba(0,0,0,0.6)]">
+          <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#292B2D]">
+            <span className="text-xs font-mono uppercase tracking-wider text-[#F2F0EA] font-semibold">
+              Security Console Authentication
+            </span>
+            <span className="text-[10px] font-mono text-[#5F8669] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5F8669] animate-pulse" />
+              ONLINE
+            </span>
           </div>
 
-          <div className="relative group">
-            <input
-              type="password"
-              id="access_key"
-              required
-              value={accessKey}
-              onChange={(e) => setAccessKey(e.target.value)}
-              placeholder=" "
-              className="w-full bg-transparent border-0 border-b border-[#464742] px-0 py-2 font-mono text-xs text-[#e5e2d9] focus:ring-0 focus:border-[#e5e2d9] transition-colors peer"
-            />
-            <label
-              htmlFor="access_key"
-              className="absolute left-0 top-2 font-mono text-xs text-[#91918a] transition-all peer-focus:-top-3.5 peer-focus:text-[10px] peer-focus:text-[#e8c178] peer-[:not(:placeholder-shown)]:-top-3.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-[#e8c178] pointer-events-none uppercase tracking-wider"
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-mono uppercase tracking-wider text-[#9A9A96] mb-1.5">
+                Operator Identifier / Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="analyst@sentinel.demo"
+                className="w-full bg-[#101112] border border-[#292B2D] rounded-lg px-3.5 py-2.5 text-xs text-[#F2F0EA] font-mono placeholder-[#686A6B] focus:outline-none focus:border-[#C19A5A] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-mono uppercase tracking-wider text-[#9A9A96] mb-1.5">
+                Security Key / Passcode
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full bg-[#101112] border border-[#292B2D] rounded-lg px-3.5 py-2.5 pr-10 text-xs text-[#F2F0EA] font-mono placeholder-[#686A6B] focus:outline-none focus:border-[#C19A5A] transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#686A6B] hover:text-[#9A9A96] transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-[#191A1C] hover:bg-[#242628] border border-[#292B2D] hover:border-[#C19A5A]/50 text-[#F2F0EA] font-mono text-xs font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 mt-2 btn-tactile disabled:opacity-50"
             >
-              Access Key
-            </label>
-            <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#e8c178] transition-all duration-300 peer-focus:w-full" />
+              {isLoading ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-[#C19A5A]/30 border-t-[#C19A5A] rounded-full animate-spin" />
+                  <span>AUTHENTICATING...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-[#C19A5A]" />
+                  <span>SIGN IN TO SOC CONSOLE</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-[#292B2D]" />
+            <span className="text-[#686A6B] text-[10px] font-mono uppercase tracking-widest">
+              QUICK ACCESS
+            </span>
+            <div className="flex-1 h-px bg-[#292B2D]" />
           </div>
 
           <button
-            type="submit"
-            disabled={isLoading}
-            className="mt-4 w-full border border-[#464742] bg-[#1c1c16] text-[#e5e2d9] hover:bg-[#2a2a24] hover:border-[#e8c178] transition-all duration-200 py-3 px-6 flex items-center justify-center gap-2 group font-mono text-xs tracking-widest uppercase shadow-lg disabled:opacity-50"
-          >
-            <span>{isLoading ? 'INITIALIZING...' : 'INITIALIZE SESSION'}</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-          </button>
-
-          <button
-            type="button"
             onClick={handleDemoAccess}
             disabled={isLoading}
-            className="w-full bg-transparent border border-dashed border-[#464742] text-[#91918a] hover:text-[#e8c178] hover:border-[#e8c178]/50 py-2 font-mono text-[11px] uppercase tracking-wider transition-all"
+            className="w-full bg-[#C19A5A]/15 hover:bg-[#C19A5A]/25 border border-[#C19A5A]/40 text-[#F2F0EA] font-mono text-xs font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 btn-tactile disabled:opacity-50"
           >
-            [ Quick Demo Access ]
+            <span>ENTER DEMO ENVIRONMENT</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#C19A5A]" />
           </button>
-        </form>
-      </main>
 
-      {/* Footer */}
-      <footer className="absolute bottom-6 w-full flex justify-center z-10">
-        <span className="font-mono text-[11px] text-[#91918a]/60 tracking-wider">
-          SNTL // INTELLIGENCE ENGINE
-        </span>
-      </footer>
+          <p className="text-center text-[10px] font-mono text-[#686A6B] mt-4">
+            Pre-authenticated session for presentation & judicial review
+          </p>
+        </div>
+
+        {/* Technical Coordinate Footer */}
+        <div className="text-center text-[11px] font-mono text-[#686A6B] mt-6 flex items-center justify-center gap-3">
+          <span>LAT: 28.6139° N</span>
+          <span>•</span>
+          <span>SYS.VER: 2026.08</span>
+          <span>•</span>
+          <span>TLS 1.3</span>
+        </div>
+      </div>
     </div>
   );
 }
