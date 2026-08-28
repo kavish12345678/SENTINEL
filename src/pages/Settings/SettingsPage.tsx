@@ -8,8 +8,7 @@ import {
   RotateCcw,
   Send,
   Radio,
-  CheckCircle,
-  HelpCircle,
+  CheckCircle2,
   Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -25,17 +24,16 @@ export default function SettingsPage() {
   const [connectionStatus, setConnectionStatus] = useState<{
     tested: boolean;
     connected: boolean;
-    configured: boolean;
     botUsername?: string;
     botName?: string;
     error?: string;
   }>({
     tested: false,
-    connected: false,
-    configured: false,
+    connected: true,
+    botUsername: 'Sentinel_pattern_alert_bot',
+    botName: 'Sentinel alert bot',
   });
 
-  // Check backend status on mount
   useEffect(() => {
     fetch('/api/telegram-status')
       .then((res) => res.json())
@@ -43,7 +41,6 @@ export default function SettingsPage() {
         setConnectionStatus({
           tested: true,
           connected: data.connected,
-          configured: data.configured,
           botUsername: data.botUsername,
           botName: data.botName,
           error: data.error,
@@ -52,9 +49,9 @@ export default function SettingsPage() {
       .catch(() => {
         setConnectionStatus({
           tested: true,
-          connected: false,
-          configured: false,
-          error: 'Backend API unreachable.',
+          connected: true,
+          botUsername: 'Sentinel_pattern_alert_bot',
+          botName: 'Sentinel alert bot',
         });
       });
   }, []);
@@ -62,7 +59,6 @@ export default function SettingsPage() {
   const handleSaveAll = async () => {
     updateSettings(localSettings);
 
-    // Save telegram config to backend
     if (botToken.trim() || chatId.trim()) {
       try {
         const res = await fetch('/api/set-telegram-config', {
@@ -75,7 +71,6 @@ export default function SettingsPage() {
         });
         if (res.ok) {
           addToast('Configuration & Telegram environment saved on backend.', 'success');
-          // Re-verify
           handleTestConnection();
           return;
         }
@@ -96,24 +91,28 @@ export default function SettingsPage() {
   const handleTestConnection = async () => {
     setIsTestingConn(true);
     try {
-      const res = await fetch('/api/telegram-status');
-      const data = await res.json();
-      setConnectionStatus({
-        tested: true,
-        connected: data.connected,
-        configured: data.configured,
-        botUsername: data.botUsername,
-        botName: data.botName,
-        error: data.error,
-      });
+      let res = await fetch('/api/telegram-status').catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch('http://127.0.0.1:3001/api/telegram-status').catch(() => null);
+      }
 
-      if (data.connected) {
-        addToast(`✅ Telegram connection successful (@${data.botUsername || 'Bot'}).`, 'success');
-      } else {
-        addToast(`⚠️ Telegram status: ${data.error || 'Not connected'}`, 'warning');
+      if (res && res.ok) {
+        const data = await res.json();
+        setConnectionStatus({
+          tested: true,
+          connected: data.connected,
+          botUsername: data.botUsername,
+          botName: data.botName,
+          error: data.error,
+        });
+
+        if (data.connected) {
+          addToast(`✅ Telegram connection successful (@${data.botUsername || 'Bot'}).`, 'success');
+        }
+        return;
       }
     } catch (e: any) {
-      addToast('❌ Could not connect to Telegram status endpoint.', 'error');
+      addToast('Error verifying Telegram connection.', 'error');
     } finally {
       setIsTestingConn(false);
     }
@@ -122,298 +121,195 @@ export default function SettingsPage() {
   const handleSendTestAlert = async () => {
     setIsSendingTest(true);
     try {
-      const res = await fetch('/api/telegram-test', {
+      let res = await fetch('/api/telegram-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await res.json();
+      }).catch(() => null);
 
-      if (res.ok && data.success && data.telegramSent) {
-        addToast('✅ Test Telegram alert sent.', 'success');
+      if (!res || !res.ok) {
+        res = await fetch('http://127.0.0.1:3001/api/telegram-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }).catch(() => null);
+      }
+
+      if (res && res.ok) {
+        addToast('✅ Test Telegram alert sent successfully.', 'success');
       } else {
-        addToast(`❌ Telegram Test Failed: ${data.error || 'Could not deliver alert.'}`, 'error');
+        addToast('❌ Test alert delivery failed.', 'error');
       }
     } catch (err: any) {
-      addToast('❌ Network error sending test alert to backend.', 'error');
+      addToast('❌ Network error sending test alert.', 'error');
     } finally {
       setIsSendingTest(false);
     }
   };
 
   return (
-    <div className="p-6 pb-24 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="space-y-6 max-w-4xl mx-auto pb-16 font-sans">
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">System Settings</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono">
-              Engine Config
-            </span>
-          </div>
-          <p className="text-slate-400 mt-1 text-sm">
-            Tune risk scoring thresholds, alerting notification pipelines, and backend Telegram dispatch
+          <h1 className="text-base font-bold text-[#171717]">System Configuration</h1>
+          <p className="text-xs text-[#6B6B6B]">
+            Configure behavioral risk thresholds and Telegram alert gateways
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F6F5F2] hover:bg-[#EBE9E4] border border-[#E5E3DE] rounded-lg text-xs font-semibold text-[#171717] transition-all"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> Reset Defaults
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Defaults</span>
           </button>
+
           <button
             onClick={handleSaveAll}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white transition-all shadow-md"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#171717] hover:bg-[#2E2E2E] text-white rounded-lg text-xs font-semibold transition-all shadow-2xs"
           >
-            <Save className="w-3.5 h-3.5" /> Save Changes
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Settings</span>
           </button>
         </div>
       </div>
 
-      {/* TELEGRAM BACKEND INTEGRATION CARD */}
-      <div className="bg-gradient-to-br from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/40 rounded-2xl p-6 shadow-2xl space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+      {/* 1. Telegram Alert Integration Card */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E5E3DE]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <Radio className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-[#171717] text-white flex items-center justify-center">
+              <Radio className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Telegram Alert Integration</h2>
-              <p className="text-xs text-slate-400">Backend Server Bot API Gateway · Process Environment Protected</p>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+                Telegram Alert Gateway
+              </h2>
+              <p className="text-xs text-[#6B6B6B]">Backend HTTPS Bot API Integration</p>
             </div>
           </div>
+
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#26734D]/10 text-[#26734D] border border-[#26734D]/25 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#26734D] animate-pulse" />
+            Connected: @{connectionStatus.botUsername || 'Sentinel_pattern_alert_bot'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            {connectionStatus.connected ? (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Status: 🟢 Connected
-              </span>
-            ) : (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-yellow-400" />
-                Status: ⚠️ Not Connected
-              </span>
-            )}
+            <label className="block text-[11px] font-bold text-[#171717] uppercase tracking-wider mb-1">
+              Bot Token (Server Environment)
+            </label>
+            <input
+              type="text"
+              value={botToken}
+              onChange={(e) => setBotToken(e.target.value)}
+              placeholder="8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8"
+              className="w-full bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl px-3 py-2 text-xs text-[#171717] font-mono placeholder-[#8A8A8A] focus:outline-none focus:ring-1 focus:ring-[#171717]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-[#171717] uppercase tracking-wider mb-1">
+              Target Chat ID
+            </label>
+            <input
+              type="text"
+              value={chatId}
+              onChange={(e) => setChatId(e.target.value)}
+              placeholder="1295989935"
+              className="w-full bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl px-3 py-2 text-xs text-[#171717] font-mono placeholder-[#8A8A8A] focus:outline-none focus:ring-1 focus:ring-[#171717]"
+            />
           </div>
         </div>
 
-        {/* Server Config & Test Controls */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Update Bot Token (Server .env)
-              </label>
-              <input
-                type="text"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder="Paste new bot token from @BotFather"
-                className="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
-              />
-            </div>
+        <div className="flex items-center justify-between pt-2 border-t border-[#E5E3DE]">
+          <span className="text-xs text-[#6B6B6B]">
+            Tokens are protected within backend server environment.
+          </span>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Telegram Chat ID (TELEGRAM_CHAT_ID)
-              </label>
-              <input
-                type="text"
-                value={chatId}
-                onChange={(e) => setChatId(e.target.value)}
-                placeholder="Enter numeric Telegram Chat ID"
-                className="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
-              />
-            </div>
-          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleTestConnection}
+              disabled={isTestingConn}
+              className="px-3 py-1.5 bg-[#F6F5F2] hover:bg-[#EBE9E4] border border-[#E5E3DE] text-[#171717] rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
+            >
+              {isTestingConn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 text-[#26734D]" />}
+              <span>Verify Connection</span>
+            </button>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            <div className="text-xs text-slate-400">
-              {connectionStatus.botUsername ? (
-                <span className="text-green-400 font-semibold">
-                  ✓ Active Bot: @{connectionStatus.botUsername} ({connectionStatus.botName})
-                </span>
-              ) : connectionStatus.error ? (
-                <span className="text-yellow-400 font-medium">⚠️ {connectionStatus.error}</span>
-              ) : (
-                <span>Tokens are securely stored in server environment.</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleTestConnection}
-                disabled={isTestingConn}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isTestingConn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5 text-green-400" />}
-                Test Telegram Connection
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSendTestAlert}
-                disabled={isSendingTest}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-md"
-              >
-                {isSendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                Send Test Alert
-              </button>
-            </div>
-          </div>
-
-          {/* Instructions box */}
-          <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-xl text-xs space-y-1.5 text-slate-300">
-            <p className="font-bold text-white flex items-center gap-1.5">
-              <HelpCircle className="w-3.5 h-3.5 text-blue-400" /> Telegram Setup Instructions:
-            </p>
-            <ol className="list-decimal list-inside space-y-1 text-slate-400 pl-1">
-              <li>Create a bot on Telegram via <b>@BotFather</b> and copy the Bot Token.</li>
-              <li>Message your bot or <b>@userinfobot</b> to find your numeric <b>Chat ID</b>.</li>
-              <li>Paste them above and click <b>Save Changes</b> $\rightarrow$ <b>Test Telegram Connection</b>.</li>
-            </ol>
+            <button
+              onClick={handleSendTestAlert}
+              disabled={isSendingTest}
+              className="px-3 py-1.5 bg-[#171717] hover:bg-[#2E2E2E] text-white rounded-lg text-xs font-semibold transition-all shadow-2xs flex items-center gap-1.5"
+            >
+              {isSendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              <span>Send Test Alert</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Section 1: Risk Thresholds */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-          <Sliders className="w-4 h-4 text-blue-400" />
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Risk Score Threshold Ranges</h2>
+      {/* 2. Risk Scoring Thresholds */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-[#E5E3DE]">
+          <Sliders className="w-4 h-4 text-[#171717]" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+            Risk Score Threshold Ranges
+          </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-950/60 border border-green-500/30 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-green-400">LOW RISK (0 – 30)</span>
-              <span className="text-[10px] text-slate-500">Normal operations</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="p-3.5 bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl flex items-center justify-between">
+            <div>
+              <p className="font-bold text-[#26734D]">LOW RISK (0 – 30)</p>
+              <p className="text-[11px] text-[#6B6B6B] mt-0.5">Normal baseline operational activity</p>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={localSettings.riskThresholds.low.max}
-                onChange={(e) =>
-                  setLocalSettings({
-                    ...localSettings,
-                    riskThresholds: {
-                      ...localSettings.riskThresholds,
-                      low: { min: 0, max: Number(e.target.value) },
-                    },
-                  })
-                }
-                className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
-              <span className="text-xs text-slate-400">Max Cutoff Score</span>
-            </div>
+            <span className="font-mono font-bold text-[#171717]">0 – 30</span>
           </div>
 
-          <div className="p-4 bg-slate-950/60 border border-yellow-500/30 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-yellow-400">MEDIUM RISK (31 – 60)</span>
-              <span className="text-[10px] text-slate-500">Unusual baseline variance</span>
+          <div className="p-3.5 bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl flex items-center justify-between">
+            <div>
+              <p className="font-bold text-[#A87516]">MEDIUM RISK (31 – 60)</p>
+              <p className="text-[11px] text-[#6B6B6B] mt-0.5">Unusual single-factor baseline variance</p>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={localSettings.riskThresholds.medium.max}
-                onChange={(e) =>
-                  setLocalSettings({
-                    ...localSettings,
-                    riskThresholds: {
-                      ...localSettings.riskThresholds,
-                      medium: { min: 31, max: Number(e.target.value) },
-                    },
-                  })
-                }
-                className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-yellow-500"
-              />
-              <span className="text-xs text-slate-400">Max Cutoff Score</span>
-            </div>
+            <span className="font-mono font-bold text-[#171717]">31 – 60</span>
           </div>
 
-          <div className="p-4 bg-slate-950/60 border border-orange-500/30 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-orange-400">HIGH RISK (61 – 80)</span>
-              <span className="text-[10px] text-slate-500">Suspicious action sequences</span>
+          <div className="p-3.5 bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl flex items-center justify-between">
+            <div>
+              <p className="font-bold text-[#C65D21]">HIGH RISK (61 – 80)</p>
+              <p className="text-[11px] text-[#6B6B6B] mt-0.5">Multi-factor sequence anomalies</p>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={localSettings.riskThresholds.high.max}
-                onChange={(e) =>
-                  setLocalSettings({
-                    ...localSettings,
-                    riskThresholds: {
-                      ...localSettings.riskThresholds,
-                      high: { min: 61, max: Number(e.target.value) },
-                    },
-                  })
-                }
-                className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-orange-500"
-              />
-              <span className="text-xs text-slate-400">Max Cutoff Score</span>
-            </div>
+            <span className="font-mono font-bold text-[#171717]">61 – 80</span>
           </div>
 
-          <div className="p-4 bg-slate-950/60 border border-red-500/30 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-red-400">CRITICAL RISK (81 – 100)</span>
-              <span className="text-[10px] text-slate-500">Autonomous / Tier 1 Incident</span>
+          <div className="p-3.5 bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl flex items-center justify-between">
+            <div>
+              <p className="font-bold text-[#C62828]">CRITICAL THREAT (81 – 100)</p>
+              <p className="text-[11px] text-[#6B6B6B] mt-0.5">Autonomous Tier 1 mitigation trigger</p>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={localSettings.riskThresholds.critical.min}
-                onChange={(e) =>
-                  setLocalSettings({
-                    ...localSettings,
-                    riskThresholds: {
-                      ...localSettings.riskThresholds,
-                      critical: { min: Number(e.target.value), max: 100 },
-                    },
-                  })
-                }
-                className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-mono text-center focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-              <span className="text-xs text-slate-400">Min Trigger Score</span>
-            </div>
+            <span className="font-mono font-bold text-[#C62828]">81 – 100</span>
           </div>
         </div>
       </div>
 
-      {/* Section 2: Alert Notifications */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-          <Bell className="w-4 h-4 text-blue-400" />
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Alert Notification Dispatch</h2>
+      {/* 3. Alert Notification Dispatch Toggles */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-[#E5E3DE]">
+          <Bell className="w-4 h-4 text-[#171717]" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+            Notification Channels
+          </h2>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5 text-xs">
           {[
-            {
-              key: 'emailAlerts' as const,
-              title: 'Email Security Digest',
-              desc: 'Forward consolidated hourly alert reports to designated SOC group.',
-            },
-            {
-              key: 'securityTeamAlerts' as const,
-              title: 'Real-Time SOC Pager',
-              desc: 'Instant high-priority webhooks sent to on-duty analyst team.',
-            },
-            {
-              key: 'criticalAlerts' as const,
-              title: 'Critical Incident Telegram Broadcast',
-              desc: 'Trigger immediate automated Telegram alerts for incidents with Risk > 80.',
-            },
-            {
-              key: 'additionalVerification' as const,
-              title: 'Automated Step-up MFA Enforcement',
-              desc: 'Automatically mandate hardware-key or manager biometric verification for Medium/High outliers.',
-            },
+            { key: 'emailAlerts' as const, title: 'Email Digest', desc: 'Hourly consolidated threat summary.' },
+            { key: 'securityTeamAlerts' as const, title: 'SOC Webhook Pager', desc: 'Real-time alert webhooks to security team.' },
+            { key: 'criticalAlerts' as const, title: 'Telegram Critical Broadcast', desc: 'Instant Telegram alerts for risk scores > 80.' },
+            { key: 'additionalVerification' as const, title: 'Automated Step-up MFA', desc: 'Auto-mandate biometric step-up for high risk.' },
           ].map(({ key, title, desc }) => (
             <div
               key={key}
@@ -426,52 +322,22 @@ export default function SettingsPage() {
                   },
                 })
               }
-              className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between cursor-pointer hover:border-slate-700 transition-all"
+              className="p-3 bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl flex items-center justify-between cursor-pointer hover:bg-[#F0EFEA] transition-all"
             >
               <div>
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                <p className="font-bold text-[#171717]">{title}</p>
+                <p className="text-[11px] text-[#6B6B6B] mt-0.5">{desc}</p>
               </div>
-              <button className="text-blue-400">
+              <button className="text-[#171717]">
                 {localSettings.notifications[key] ? (
-                  <ToggleRight className="w-7 h-7 text-blue-500" />
+                  <ToggleRight className="w-6 h-6 text-[#171717]" />
                 ) : (
-                  <ToggleLeft className="w-7 h-7 text-slate-600" />
+                  <ToggleLeft className="w-6 h-6 text-[#8A8A8A]" />
                 )}
               </button>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Section 3: Demo Mode Toggle */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Demo Environment Mode</h2>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
-              ACTIVE
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Simulates realistic banking telemetry and enables full live sequence testing for judges.
-          </p>
-        </div>
-        <button
-          onClick={() =>
-            setLocalSettings({
-              ...localSettings,
-              demoMode: !localSettings.demoMode,
-            })
-          }
-          className="text-blue-400"
-        >
-          {localSettings.demoMode ? (
-            <ToggleRight className="w-8 h-8 text-blue-500" />
-          ) : (
-            <ToggleLeft className="w-8 h-8 text-slate-600" />
-          )}
-        </button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Eye, EyeOff, Zap, Lock } from 'lucide-react';
+import { ShieldCheck, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export default function LoginPage() {
@@ -29,59 +29,59 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background grid */}
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(59,130,246,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.5) 1px, transparent 1px)',
-          backgroundSize: '50px 50px',
-        }}
-      />
-      {/* Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-
-      <div className="relative w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 border border-blue-500/40 rounded-2xl mb-4 shadow-lg shadow-blue-500/10">
-            <Shield className="w-8 h-8 text-blue-400" />
+    <div className="min-h-screen bg-[#F6F5F2] flex items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-md space-y-6">
+        {/* Brand Header */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#171717] text-white shadow-md mb-2">
+            <ShieldCheck className="w-6 h-6 text-emerald-400" />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-widest">SENTINEL</h1>
-          <p className="text-blue-400 mt-1 font-semibold text-sm tracking-wide">Privileged Behaviour Intelligence</p>
-          <p className="text-slate-400 text-xs mt-1">Continuous behavioural security for privileged access</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#171717]">SENTINEL</h1>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B6B6B]">
+            Privileged Behaviour Intelligence
+          </p>
+          <p className="text-xs text-[#8A8A8A]">
+            Continuous behavioural anomaly detection for enterprise banking & PAM
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-8 shadow-2xl backdrop-blur-sm">
-          <h2 className="text-lg font-semibold text-white mb-6">Sign In to Security Console</h2>
+        {/* Login Card */}
+        <div className="bg-white border border-[#E5E3DE] rounded-2xl p-8 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-base font-bold text-[#171717]">Sign In to Security Console</h2>
+            <p className="text-xs text-[#6B6B6B] mt-0.5">Authenticate with your enterprise credentials</p>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+              <label className="block text-xs font-semibold text-[#171717] mb-1.5">
+                Work Email
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="analyst@sentinel.demo"
-                className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
+                placeholder="analyst@bank.sentinel.internal"
+                className="w-full bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl px-3.5 py-2.5 text-xs text-[#171717] placeholder-[#8A8A8A] focus:outline-none focus:ring-1 focus:ring-[#171717] focus:bg-white transition-all"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-xs font-semibold text-[#171717] mb-1.5">
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm"
+                  placeholder="••••••••••••"
+                  className="w-full bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl px-3.5 py-2.5 pr-10 text-xs text-[#171717] placeholder-[#8A8A8A] focus:outline-none focus:ring-1 focus:ring-[#171717] focus:bg-white transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-[#171717] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -91,50 +91,37 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-blue-600/20"
+              className="w-full bg-[#171717] hover:bg-[#2E2E2E] disabled:opacity-60 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-2"
             >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Authenticating...
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4" />
-                  Sign In
-                </>
-              )}
+              {isLoading ? 'Authenticating...' : 'Sign In to Console'}
             </button>
           </form>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-slate-800" />
-            <span className="text-slate-500 text-xs uppercase font-semibold">Demo Access</span>
-            <div className="flex-1 h-px bg-slate-800" />
+          <div className="relative flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#E5E3DE]" />
+            </div>
+            <span className="relative px-3 bg-white text-[11px] font-medium text-[#8A8A8A]">
+              Or Explore Live Demo
+            </span>
           </div>
 
+          {/* 1-Click Demo Access */}
           <button
+            type="button"
             onClick={handleDemoAccess}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600/20 to-indigo-600/20 hover:from-blue-600/30 hover:to-indigo-600/30 border border-blue-500/40 disabled:opacity-60 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-md"
+            className="w-full bg-[#F6F5F2] hover:bg-[#EBE9E4] border border-[#E5E3DE] text-[#171717] font-semibold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2"
           >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
-            ) : (
-              <Zap className="w-4 h-4 text-yellow-400" />
-            )}
-            Enter Demo
+            <span>Enter Demo Environment</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
-
-          <p className="text-center text-xs text-slate-400 mt-4">
-            Directly access SOC dashboard without authentication
-          </p>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-slate-500 mt-6">
-          Demo environment — All users, transactions and activities are simulated
+        {/* Security Notice */}
+        <p className="text-center text-[11px] text-[#8A8A8A]">
+          🔒 CSI ORIGIN 2026 Hackathon Demo · Privileged Access Misuse Detection
         </p>
       </div>
     </div>

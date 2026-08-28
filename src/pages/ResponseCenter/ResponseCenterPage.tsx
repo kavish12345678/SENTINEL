@@ -1,484 +1,455 @@
 import { useState, useEffect } from 'react';
 import {
-  UserX,
   FileCheck,
-  Send,
-  CheckCircle,
+  UserX,
   AlertOctagon,
-  Clock,
-  Radio,
-  XCircle,
+  Send,
   Loader2,
-  SlidersHorizontal,
-  ChevronDown,
-  ChevronUp,
+  CheckCircle2,
+  XCircle,
+  Radio,
+  X,
   ExternalLink,
-  HelpCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { createTelegramShareLink, formatResponseActionNotification } from '../../utils/telegramService';
 
-export default function ResponseCenterPage() {
-  const { incident, auditRecords, executeResponseAction, isDispatching, addToast } = useApp();
-  const [activeActionKey, setActiveActionKey] = useState<string | null>(null);
-  const [showConfigDrawer, setShowConfigDrawer] = useState(false);
-  const [serverBotToken, setServerBotToken] = useState('');
-  const [serverChatId, setServerChatId] = useState('');
-  const [backendStatus, setBackendStatus] = useState<{
-    tested: boolean;
-    connected: boolean;
-    botUsername?: string;
-    botName?: string;
-    error?: string;
-  }>({
-    tested: false,
-    connected: false,
-  });
+type ActionKey = 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM';
 
-  const checkBackendStatus = async () => {
-    try {
-      let res = await fetch('/api/telegram-status').catch(() => null);
-      if (!res || !res.ok) {
-        res = await fetch('http://127.0.0.1:3001/api/telegram-status').catch(() => null);
-      }
-      if (res && res.ok) {
-        const data = await res.json();
-        setBackendStatus({
-          tested: true,
-          connected: data.connected,
-          botUsername: data.botUsername,
-          botName: data.botName,
-          error: data.error,
-        });
-        return;
-      }
-    } catch (e) {}
+interface ConfirmationModalProps {
+  actionKey: ActionKey;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDispatching: boolean;
+  incidentUser: string;
+  incidentRisk: number;
+}
 
-    setBackendStatus({
-      tested: true,
-      connected: true,
-      botUsername: 'Sentinel_pattern_alert_bot',
-      botName: 'Sentinel alert bot',
-    });
+function ConfirmationModal({
+  actionKey,
+  onConfirm,
+  onCancel,
+  isDispatching,
+  incidentUser,
+  incidentRisk,
+}: ConfirmationModalProps) {
+  const actionDetails: Record<
+    ActionKey,
+    { title: string; desc: string; targetNote: string; confirmLabel: string; btnColor: string }
+  > = {
+    REQUIRE_VERIFICATION: {
+      title: 'Require Additional Verification',
+      desc: 'Enforce step-up hardware key or manager authorization for subsequent actions.',
+      targetNote: 'Prompt will be dispatched to identity device.',
+      confirmLabel: 'Enforce Verification',
+      btnColor: 'bg-[#A87516] hover:bg-[#8F6312]',
+    },
+    RESTRICT_USER: {
+      title: 'Restrict Privileged Access',
+      desc: 'Immediately revoke active sessions and freeze identity access tokens across PAM.',
+      targetNote: 'Identity will be set to RESTRICTED status.',
+      confirmLabel: 'Restrict Identity',
+      btnColor: 'bg-[#C62828] hover:bg-[#A31D1D]',
+    },
+    SUSPEND_TRANSACTION: {
+      title: 'Suspend Outward Transaction',
+      desc: 'Halt outward wire of ₹18,50,000 at the payment gateway pending fraud clearance.',
+      targetNote: 'Disbursement to XYZ Holdings will be blocked.',
+      confirmLabel: 'Suspend Transaction',
+      btnColor: 'bg-[#C62828] hover:bg-[#A31D1D]',
+    },
+    ESCALATE_TO_TEAM: {
+      title: 'Escalate to SOC Operations Team',
+      desc: 'Broadcast critical incident report to on-call security leads and lock evidence log.',
+      targetNote: 'High-priority alert sent to SOC Telegram channel.',
+      confirmLabel: 'Escalate Incident',
+      btnColor: 'bg-[#171717] hover:bg-[#2E2E2E]',
+    },
   };
+
+  const current = actionDetails[actionKey];
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-2xs z-50 flex items-center justify-center p-4 font-sans">
+      <div
+        className="bg-white border border-[#E5E3DE] rounded-2xl w-full max-w-md p-6 shadow-xl text-[#171717] space-y-5 animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between pb-3 border-b border-[#E5E3DE]">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A]">
+              Response Confirmation
+            </span>
+            <h2 className="text-base font-bold text-[#171717] mt-0.5">{current.title}</h2>
+          </div>
+          <button
+            onClick={onCancel}
+            disabled={isDispatching}
+            className="text-[#8A8A8A] hover:text-[#171717] p-1 rounded transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-xs text-[#6B6B6B] leading-relaxed">{current.desc}</p>
+
+        {/* Target Metadata Summary */}
+        <div className="p-3.5 bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl text-xs space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[#6B6B6B]">Target Identity:</span>
+            <span className="font-bold text-[#171717]">{incidentUser}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[#6B6B6B]">Evaluated Risk:</span>
+            <span className="font-mono font-bold text-[#C62828]">{incidentRisk} / 100</span>
+          </div>
+          {actionKey === 'SUSPEND_TRANSACTION' && (
+            <div className="flex items-center justify-between">
+              <span className="text-[#6B6B6B]">Transaction Amount:</span>
+              <span className="font-mono font-bold text-[#C62828]">₹18,50,000</span>
+            </div>
+          )}
+          <div className="pt-1 text-[11px] text-[#8A8A8A]">
+            💡 {current.targetNote}
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex items-center gap-2 pt-2">
+          <button
+            onClick={onCancel}
+            disabled={isDispatching}
+            className="flex-1 py-2 bg-[#F6F5F2] hover:bg-[#EBE9E4] border border-[#E5E3DE] text-[#171717] rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDispatching}
+            className={`flex-1 py-2 text-white rounded-lg text-xs font-semibold transition-all shadow-2xs flex items-center justify-center gap-1.5 disabled:opacity-60 ${current.btnColor}`}
+          >
+            {isDispatching ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Dispatching...</span>
+              </>
+            ) : (
+              <span>{current.confirmLabel}</span>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ResponseCenterPage() {
+  const { incident, auditRecords, executeResponseAction, isDispatching } = useApp();
+  const [selectedModalAction, setSelectedModalAction] = useState<ActionKey | null>(null);
+  const [botUsername, setBotUsername] = useState('Sentinel_pattern_alert_bot');
 
   useEffect(() => {
-    checkBackendStatus();
+    fetch('/api/telegram-status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.connected && data.botUsername) {
+          setBotUsername(data.botUsername);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const handleSaveTelegramCredentials = async () => {
-    if (!serverBotToken.trim() && !serverChatId.trim()) {
-      addToast('Please enter a Bot Token or Chat ID to save.', 'warning');
-      return;
-    }
-
+  const handleConfirmAction = async () => {
+    if (!selectedModalAction) return;
     try {
-      const res = await fetch('/api/set-telegram-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          botToken: serverBotToken.trim() || undefined,
-          chatId: serverChatId.trim() || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        addToast('Credentials saved to backend environment.', 'success');
-        checkBackendStatus();
-      }
-    } catch (e: any) {
-      addToast('Error saving credentials to server.', 'error');
-    }
-  };
-
-  const handleAction = async (actionKey: 'REQUIRE_VERIFICATION' | 'RESTRICT_USER' | 'SUSPEND_TRANSACTION' | 'ESCALATE_TO_TEAM') => {
-    if (isDispatching) return;
-    setActiveActionKey(actionKey);
-    try {
-      await executeResponseAction(actionKey);
+      await executeResponseAction(selectedModalAction);
     } finally {
-      setActiveActionKey(null);
+      setSelectedModalAction(null);
     }
   };
 
-  const getStatusDisplay = () => {
+  const getStatusBadge = () => {
     switch (incident.status) {
       case 'VERIFICATION_REQUIRED':
-        return { label: '🟡 Verification Required', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30' };
+        return { label: 'Verification Required', color: 'bg-[#A87516]/10 text-[#A87516] border-[#A87516]/25' };
       case 'RESTRICTED':
-        return { label: '🔴 User Restricted', color: 'text-red-400 bg-red-500/10 border-red-500/30' };
+        return { label: 'User Restricted', color: 'bg-[#C62828]/10 text-[#C62828] border-[#C62828]/25' };
       case 'TRANSACTION_SUSPENDED':
-        return { label: '🛑 Transaction Suspended', color: 'text-orange-400 bg-orange-500/10 border-orange-500/30' };
+        return { label: 'Transaction Suspended', color: 'bg-[#C65D21]/10 text-[#C65D21] border-[#C65D21]/25' };
       case 'ESCALATED':
-        return { label: '🚨 Escalated', color: 'text-purple-400 bg-purple-500/10 border-purple-500/30' };
+        return { label: 'Escalated to SOC', color: 'bg-[#171717] text-white border-[#171717]' };
       default:
-        return { label: '🔴 Critical Incident Active', color: 'text-red-400 bg-red-500/10 border-red-500/30' };
+        return { label: 'Active Threat Investigation', color: 'bg-[#C62828]/10 text-[#C62828] border-[#C62828]/25' };
     }
   };
 
-  const statusInfo = getStatusDisplay();
+  const statusBadge = getStatusBadge();
 
-  // Instant pre-formatted direct Telegram link for demonstration fallback
+  // Instant direct prefilled Telegram link
   const samplePayload = formatResponseActionNotification({
     action: 'SUSPEND TRANSACTION',
     status: incident.status,
     caseId: incident.caseId,
     userName: incident.userName,
     targetAmount: '₹18,50,000',
-    analyst: 'Security Analyst (SOC L2)',
+    analyst: 'Security Analyst',
   });
   const directTelegramLink = createTelegramShareLink(samplePayload);
 
   return (
-    <div className="p-6 pb-24 max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Response Center</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/30 font-bold">
-              Active Mitigation
-            </span>
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
+      {/* 1. Header with Telegram Alerting Status Strip */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[#171717] text-white flex items-center justify-center shadow-2xs">
+            <Radio className="w-4 h-4 text-emerald-400" />
           </div>
-          <p className="text-slate-400 mt-1 text-sm">
-            Execute graduated containment protocols based on evaluated behavioural risk
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+                Telegram Alerting Integration
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#26734D]/10 text-[#26734D] border border-[#26734D]/25 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#26734D] animate-pulse" />
+                Connected: @{botUsername}
+              </span>
+            </div>
+            <p className="text-xs text-[#6B6B6B] mt-0.5">
+              All containment protocol actions below are dispatched via HTTPS to your Telegram security channel.
+            </p>
+          </div>
         </div>
 
-        <div className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all duration-300 ${statusInfo.color}`}>
-          {statusInfo.label}
-        </div>
+        <a
+          href={directTelegramLink}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F6F5F2] hover:bg-[#EBE9E4] border border-[#E5E3DE] text-[#171717] rounded-lg text-xs font-semibold transition-all self-start sm:self-auto"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Open in Telegram</span>
+          <ExternalLink className="w-3 h-3 text-[#8A8A8A]" />
+        </a>
       </div>
 
-      {/* Telegram Alert Recipient & Live Status Banner */}
-      <div className="bg-gradient-to-r from-blue-950/50 via-slate-900 to-slate-900 border border-blue-500/40 rounded-2xl p-5 shadow-xl space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 2. Active Incident Banner */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#E5E3DE]">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-              <Radio className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white tracking-wide">Telegram Alert Gateway</span>
-                {backendStatus.connected ? (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-extrabold border border-green-500/30 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    LIVE: @{backendStatus.botUsername || 'SENTINEL_BOT'}
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-extrabold border border-yellow-500/30">
-                    ⚠️ SERVER BOT CONFIGURATION NEEDED
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Every clicked protocol action below is formatted and broadcast to your Telegram bot via backend API.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              onClick={() => setShowConfigDrawer(!showConfigDrawer)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition-all"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>{showConfigDrawer ? 'Hide Setup' : 'Bot Setup & Status'}</span>
-              {showConfigDrawer ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
-
-            <a
-              href={directTelegramLink}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-all shadow-md"
-              title="Open the formatted incident alert directly in Telegram"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Open in Telegram</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-        </div>
-
-        {/* Collapsible Setup Drawer */}
-        {showConfigDrawer && (
-          <div className="pt-4 border-t border-slate-800/80 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                  Telegram Bot Token (from @BotFather)
-                </label>
-                <input
-                  type="text"
-                  value={serverBotToken}
-                  onChange={(e) => setServerBotToken(e.target.value)}
-                  placeholder="e.g. 1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                  Telegram Chat ID / Channel ID
-                </label>
-                <input
-                  type="text"
-                  value={serverChatId}
-                  onChange={(e) => setServerChatId(e.target.value)}
-                  placeholder="e.g. 987654321 or -100123456789"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 text-xs text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <HelpCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                <span>
-                  Tip: Get your numeric Chat ID by messaging <b>@userinfobot</b> on Telegram, then click <b>Save & Verify</b>!
-                </span>
-              </div>
-              <button
-                onClick={handleSaveTelegramCredentials}
-                className="w-full sm:w-auto px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-all shadow-sm"
-              >
-                Save & Verify Token
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Incident Spotlight Card */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 font-extrabold text-xl">
+            <div className="w-12 h-12 rounded-xl bg-[#C62828] text-white flex items-center justify-center font-bold text-base shadow-sm">
               AS
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">{incident.userName}</h2>
-                <span className="text-xs font-mono text-slate-400">({incident.caseId})</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">Payment Administrator · Finance Operations</p>
-              <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-slate-400" /> Detected: 02:23 AM
+                <h2 className="text-base font-bold text-[#171717]">{incident.userName}</h2>
+                <span className="text-xs font-mono text-[#8A8A8A]">({incident.caseId})</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${statusBadge.color}`}>
+                  {statusBadge.label}
                 </span>
-                <span>• Target: ₹18,50,000 (XYZ Holdings)</span>
               </div>
+              <p className="text-xs text-[#6B6B6B] mt-0.5">
+                Role: Payment Administrator · Department: Finance Operations
+              </p>
+              <p className="text-[11px] text-[#8A8A8A] font-mono mt-0.5">
+                Detected: 02:23 AM · Target: ₹18,50,000 (XYZ Holdings)
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-5 bg-slate-950/80 border border-slate-800 p-3.5 rounded-xl self-start md:self-auto">
+          <div className="flex items-center gap-4 bg-[#FAFAF8] border border-[#E5E3DE] px-4 py-2.5 rounded-xl self-start md:self-auto">
             <div className="text-right">
-              <p className="text-2xl font-black text-red-400">{incident.riskScore}/100</p>
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Assessed Risk</p>
+              <span className="text-[10px] uppercase font-bold text-[#8A8A8A]">Risk Score</span>
+              <p className="text-xl font-bold font-mono text-[#C62828]">{incident.riskScore} / 100</p>
             </div>
-            <div className="h-8 w-px bg-slate-800" />
+            <div className="h-7 w-px bg-[#E5E3DE]" />
             <div>
-              <p className="text-xs font-bold text-red-400 uppercase tracking-wide">Recommended Action</p>
-              <p className="text-sm font-extrabold text-white">{incident.recommendedAction.replace(/_/g, ' ')}</p>
+              <span className="text-[10px] uppercase font-bold text-[#C62828]">Recommended</span>
+              <p className="text-xs font-bold text-[#171717]">SUSPEND TRANSACTION</p>
             </div>
           </div>
         </div>
 
-        {/* Graduated Action Buttons */}
+        {/* 3. Four Response Action Cards (Clean White Cards) */}
         <div>
-          <div className="flex items-center justify-between mb-3.5">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Select Response Protocol:
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+              Select Mitigation Protocol
             </h3>
             {isDispatching && (
-              <span className="text-xs font-semibold text-blue-400 flex items-center gap-1.5 animate-pulse">
+              <span className="text-xs font-semibold text-[#171717] flex items-center gap-1.5">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Dispatching Security Response to Telegram...
+                Dispatching action to gateway & Telegram...
               </span>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {/* Action 1: Require Verification */}
-            <button
-              onClick={() => handleAction('REQUIRE_VERIFICATION')}
-              disabled={isDispatching}
-              className={`p-4 rounded-xl border text-left transition-all group ${
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Require Verification */}
+            <div
+              onClick={() => !isDispatching && setSelectedModalAction('REQUIRE_VERIFICATION')}
+              className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
                 incident.status === 'VERIFICATION_REQUIRED'
-                  ? 'bg-yellow-500/20 border-yellow-500/60 ring-2 ring-yellow-500/30'
-                  : 'bg-slate-800/60 border-slate-700 hover:border-yellow-500/50 hover:bg-yellow-500/5'
-              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-[#A87516] bg-[#A87516]/5 ring-1 ring-[#A87516]'
+                  : 'border-[#E5E3DE] hover:border-[#171717]/40 hover:bg-[#FAFAF8]'
+              } ${isDispatching ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              <div className="w-9 h-9 rounded-lg bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center text-yellow-400 mb-3 group-hover:scale-105 transition-transform">
-                {isDispatching && activeActionKey === 'REQUIRE_VERIFICATION' ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
-                ) : (
-                  <FileCheck className="w-4 h-4" />
-                )}
+              <div className="w-8 h-8 rounded-lg bg-[#FAFAF8] border border-[#E5E3DE] flex items-center justify-center text-[#171717] mb-3">
+                <FileCheck className="w-4 h-4" />
               </div>
-              <p className="text-sm font-bold text-white group-hover:text-yellow-300 transition-colors">
-                {isDispatching && activeActionKey === 'REQUIRE_VERIFICATION'
-                  ? '⏳ Dispatching...'
-                  : 'Require Verification'}
+              <h4 className="text-xs font-bold text-[#171717]">Require Verification</h4>
+              <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">
+                Prompt identity for biometric step-up or manager authorization.
               </p>
-              <p className="text-xs text-slate-400 mt-1">Prompt for step-up biometric / manager MFA authorization.</p>
-              <span className="inline-block mt-3 text-[10px] font-bold text-yellow-400 uppercase">
-                Tier 1 Containment →
+              <span className="inline-block mt-3 text-[10px] font-semibold text-[#8A8A8A] uppercase">
+                Tier 1 Protocol →
               </span>
-            </button>
+            </div>
 
-            {/* Action 2: Restrict User */}
-            <button
-              onClick={() => handleAction('RESTRICT_USER')}
-              disabled={isDispatching}
-              className={`p-4 rounded-xl border text-left transition-all group ${
+            {/* Card 2: Restrict User */}
+            <div
+              onClick={() => !isDispatching && setSelectedModalAction('RESTRICT_USER')}
+              className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
                 incident.status === 'RESTRICTED'
-                  ? 'bg-red-500/20 border-red-500/60 ring-2 ring-red-500/30'
-                  : 'bg-slate-800/60 border-slate-700 hover:border-red-500/50 hover:bg-red-500/5'
-              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-[#C62828] bg-[#C62828]/5 ring-1 ring-[#C62828]'
+                  : 'border-[#E5E3DE] hover:border-[#171717]/40 hover:bg-[#FAFAF8]'
+              } ${isDispatching ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              <div className="w-9 h-9 rounded-lg bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 mb-3 group-hover:scale-105 transition-transform">
-                {isDispatching && activeActionKey === 'RESTRICT_USER' ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-red-400" />
-                ) : (
-                  <UserX className="w-4 h-4" />
-                )}
+              <div className="w-8 h-8 rounded-lg bg-[#FAFAF8] border border-[#E5E3DE] flex items-center justify-center text-[#C62828] mb-3">
+                <UserX className="w-4 h-4" />
               </div>
-              <p className="text-sm font-bold text-white group-hover:text-red-300 transition-colors">
-                {isDispatching && activeActionKey === 'RESTRICT_USER'
-                  ? '⏳ Dispatching...'
-                  : 'Restrict User'}
+              <h4 className="text-xs font-bold text-[#171717]">Restrict User</h4>
+              <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">
+                Immediately revoke privileged session and freeze account access.
               </p>
-              <p className="text-xs text-slate-400 mt-1">Revoke privileged session & freeze account access.</p>
-              <span className="inline-block mt-3 text-[10px] font-bold text-red-400 uppercase">
-                Tier 2 Containment →
+              <span className="inline-block mt-3 text-[10px] font-semibold text-[#8A8A8A] uppercase">
+                Tier 2 Protocol →
               </span>
-            </button>
+            </div>
 
-            {/* Action 3: Suspend Transaction (Recommended) */}
-            <button
-              onClick={() => handleAction('SUSPEND_TRANSACTION')}
-              disabled={isDispatching}
-              className={`p-4 rounded-xl border text-left transition-all group relative overflow-hidden ${
+            {/* Card 3: Suspend Transaction (Recommended) */}
+            <div
+              onClick={() => !isDispatching && setSelectedModalAction('SUSPEND_TRANSACTION')}
+              className={`p-4 rounded-xl border transition-all cursor-pointer bg-white relative ${
                 incident.status === 'TRANSACTION_SUSPENDED'
-                  ? 'bg-orange-500/20 border-orange-500/60 ring-2 ring-orange-500/30'
-                  : 'bg-gradient-to-br from-orange-950/30 to-slate-800/80 border-orange-500/50 hover:border-orange-400 hover:bg-orange-500/10'
-              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-[#C62828] bg-[#C62828]/5 ring-1 ring-[#C62828]'
+                  : 'border-[#171717] hover:bg-[#FAFAF8] shadow-2xs'
+              } ${isDispatching ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-orange-500/20 border border-orange-500/40 text-[9px] font-black text-orange-400">
-                RECOMMENDED
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 mb-3 group-hover:scale-105 transition-transform">
-                {isDispatching && activeActionKey === 'SUSPEND_TRANSACTION' ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-                ) : (
-                  <AlertOctagon className="w-4 h-4" />
-                )}
-              </div>
-              <p className="text-sm font-bold text-white group-hover:text-orange-300 transition-colors">
-                {isDispatching && activeActionKey === 'SUSPEND_TRANSACTION'
-                  ? '⏳ Dispatching...'
-                  : 'Suspend Transaction'}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">Halt outward wire of ₹18,50,000 immediately in gateway.</p>
-              <span className="inline-block mt-3 text-[10px] font-bold text-orange-400 uppercase">
-                Direct Financial Guard →
+              <span className="absolute top-2.5 right-2.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#C62828]/10 text-[#C62828] uppercase border border-[#C62828]/25">
+                Recommended
               </span>
-            </button>
+              <div className="w-8 h-8 rounded-lg bg-[#FAFAF8] border border-[#E5E3DE] flex items-center justify-center text-[#C62828] mb-3">
+                <AlertOctagon className="w-4 h-4" />
+              </div>
+              <h4 className="text-xs font-bold text-[#171717]">Suspend Transaction</h4>
+              <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">
+                Halt outward wire of ₹18,50,000 immediately in gateway.
+              </p>
+              <span className="inline-block mt-3 text-[10px] font-bold text-[#C62828] uppercase">
+                Financial Guard →
+              </span>
+            </div>
 
-            {/* Action 4: Escalate to Security Team */}
-            <button
-              onClick={() => handleAction('ESCALATE_TO_TEAM')}
-              disabled={isDispatching}
-              className={`p-4 rounded-xl border text-left transition-all group ${
+            {/* Card 4: Escalate to Team */}
+            <div
+              onClick={() => !isDispatching && setSelectedModalAction('ESCALATE_TO_TEAM')}
+              className={`p-4 rounded-xl border transition-all cursor-pointer bg-white ${
                 incident.status === 'ESCALATED'
-                  ? 'bg-purple-500/20 border-purple-500/60 ring-2 ring-purple-500/30'
-                  : 'bg-slate-800/60 border-slate-700 hover:border-purple-500/50 hover:bg-purple-500/5'
-              } ${isDispatching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'border-[#171717] bg-[#171717]/5 ring-1 ring-[#171717]'
+                  : 'border-[#E5E3DE] hover:border-[#171717]/40 hover:bg-[#FAFAF8]'
+              } ${isDispatching ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              <div className="w-9 h-9 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-3 group-hover:scale-105 transition-transform">
-                {isDispatching && activeActionKey === 'ESCALATE_TO_TEAM' ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+              <div className="w-8 h-8 rounded-lg bg-[#FAFAF8] border border-[#E5E3DE] flex items-center justify-center text-[#171717] mb-3">
+                <Send className="w-4 h-4" />
               </div>
-              <p className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
-                {isDispatching && activeActionKey === 'ESCALATE_TO_TEAM'
-                  ? '⏳ Dispatching...'
-                  : 'Escalate to Team'}
+              <h4 className="text-xs font-bold text-[#171717]">Escalate to Team</h4>
+              <p className="text-xs text-[#6B6B6B] mt-1 leading-relaxed">
+                Broadcast critical incident brief to SOC operations leads.
               </p>
-              <p className="text-xs text-slate-400 mt-1">Dispatch high-priority alert to on-call SOC leads.</p>
-              <span className="inline-block mt-3 text-[10px] font-bold text-purple-400 uppercase">
-                Tier 3 Escalation →
+              <span className="inline-block mt-3 text-[10px] font-semibold text-[#8A8A8A] uppercase">
+                Tier 3 Protocol →
               </span>
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* Response Audit History & Alert Dispatch Log */}
-        <div className="pt-4 border-t border-slate-800 space-y-3">
+        {/* 4. Response Audit History Table */}
+        <div className="pt-5 border-t border-[#E5E3DE] space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
               Response Audit History & Alert Dispatch Log
             </h3>
-            <span className="text-[11px] text-slate-500 font-mono">
-              {auditRecords.length} Event{auditRecords.length !== 1 ? 's' : ''} Recorded
+            <span className="text-[11px] text-[#8A8A8A] font-mono">
+              {auditRecords.length} Event{auditRecords.length !== 1 ? 's' : ''} Logged
             </span>
           </div>
 
-          <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-            {auditRecords.map((record) => (
-              <div
-                key={record.id}
-                className="p-3.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs hover:border-slate-700 transition-all"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="mt-0.5 flex-shrink-0">
-                    {record.telegramStatus === 'SENT' ? (
-                      <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-green-400">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                      </div>
-                    ) : record.telegramStatus === 'SENDING' ? (
-                      <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400">
-                        <XCircle className="w-3.5 h-3.5" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-white font-bold tracking-tight truncate">{record.actionTitle}</p>
-                    <p className="text-slate-500 text-[11px] mt-0.5">
-                      Updated by <span className="text-slate-300 font-medium">{record.executedBy}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 text-right flex-shrink-0">
-                  <div className="text-right">
-                    <span
-                      className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
-                        record.telegramStatus === 'SENT'
-                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                          : record.telegramStatus === 'SENDING'
-                          ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                          : 'bg-red-500/20 text-red-400 border-red-500/30'
-                      }`}
-                    >
-                      Telegram: {record.telegramStatus === 'SENT' ? '✓ SENT' : record.telegramStatus === 'SENDING' ? '⏳ SENDING' : '❌ FAILED'}
-                    </span>
-                    <p className="text-slate-500 font-mono text-[10px] mt-1">{record.timestamp}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="border border-[#E5E3DE] rounded-xl overflow-hidden shadow-2xs">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-[#FAFAF8] border-b border-[#E5E3DE] text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                  <th className="py-2.5 px-4 font-semibold">Time</th>
+                  <th className="py-2.5 px-4 font-semibold">Action</th>
+                  <th className="py-2.5 px-4 font-semibold">Incident</th>
+                  <th className="py-2.5 px-4 font-semibold">Analyst</th>
+                  <th className="py-2.5 px-4 font-semibold">Telegram Delivery</th>
+                  <th className="py-2.5 px-4 font-semibold text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E3DE]">
+                {auditRecords.map((record) => (
+                  <tr key={record.id} className="hover:bg-[#F6F5F2]/60 transition-colors">
+                    <td className="py-2.5 px-4 font-mono text-[#6B6B6B] text-[11px]">
+                      {record.timestamp}
+                    </td>
+                    <td className="py-2.5 px-4 font-bold text-[#171717]">
+                      {record.actionTitle}
+                    </td>
+                    <td className="py-2.5 px-4 font-mono text-[#6B6B6B] text-[11px]">
+                      {record.incidentId}
+                    </td>
+                    <td className="py-2.5 px-4 text-[#6B6B6B]">
+                      {record.executedBy}
+                    </td>
+                    <td className="py-2.5 px-4">
+                      {record.telegramStatus === 'SENT' ? (
+                        <span className="text-[11px] font-semibold text-[#26734D] flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> ✓ Sent
+                        </span>
+                      ) : record.telegramStatus === 'SENDING' ? (
+                        <span className="text-[11px] font-semibold text-[#171717] flex items-center gap-1">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-[#C62828] flex items-center gap-1">
+                          <XCircle className="w-3.5 h-3.5" /> Delivery Failed
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-neutral-100 border border-neutral-200 text-[#171717]">
+                        Completed
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {selectedModalAction && (
+        <ConfirmationModal
+          actionKey={selectedModalAction}
+          onConfirm={handleConfirmAction}
+          onCancel={() => setSelectedModalAction(null)}
+          isDispatching={isDispatching}
+          incidentUser={incident.userName}
+          incidentRisk={incident.riskScore}
+        />
+      )}
     </div>
   );
 }

@@ -1,19 +1,5 @@
+import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { CheckCircle, AlertTriangle, Info, XCircle, X } from 'lucide-react';
-
-const icons = {
-  success: CheckCircle,
-  warning: AlertTriangle,
-  error: XCircle,
-  info: Info,
-};
-
-const colors = {
-  success: 'bg-green-500/10 border-green-500/40 text-green-400',
-  warning: 'bg-yellow-500/10 border-yellow-500/40 text-yellow-400',
-  error: 'bg-red-500/10 border-red-500/40 text-red-400',
-  info: 'bg-blue-500/10 border-blue-500/40 text-blue-400',
-};
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useApp();
@@ -21,19 +7,39 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 w-80">
+    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-md w-full pointer-events-none">
       {toasts.map((toast) => {
-        const Icon = icons[toast.type];
+        const isSuccess = toast.type === 'success';
+        const isError = toast.type === 'error';
+        const isWarning = toast.type === 'warning';
+
         return (
           <div
             key={toast.id}
-            className={`flex items-start gap-3 p-4 rounded-xl border backdrop-blur shadow-xl animate-in slide-in-from-right duration-300 ${colors[toast.type]}`}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg bg-white transition-all transform translate-y-0 text-sm ${
+              isSuccess
+                ? 'border-[#26734D]/30 text-[#171717]'
+                : isError
+                ? 'border-[#C62828]/30 text-[#171717]'
+                : isWarning
+                ? 'border-[#A87516]/30 text-[#171717]'
+                : 'border-[#E5E3DE] text-[#171717]'
+            }`}
           >
-            <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <p className="flex-1 text-sm font-medium leading-snug">{toast.message}</p>
+            <div className="mt-0.5 flex-shrink-0">
+              {isSuccess && <CheckCircle2 className="w-4 h-4 text-[#26734D]" />}
+              {isError && <XCircle className="w-4 h-4 text-[#C62828]" />}
+              {isWarning && <AlertTriangle className="w-4 h-4 text-[#A87516]" />}
+              {!isSuccess && !isError && !isWarning && <Info className="w-4 h-4 text-[#4C5D8A]" />}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-[#171717] leading-snug">{toast.message}</p>
+            </div>
+
             <button
               onClick={() => removeToast(toast.id)}
-              className="opacity-60 hover:opacity-100 transition-opacity"
+              className="text-[#6B6B6B] hover:text-[#171717] transition-colors p-0.5 rounded"
             >
               <X className="w-4 h-4" />
             </button>

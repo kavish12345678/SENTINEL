@@ -1,11 +1,4 @@
 import {
-  Clock,
-  CreditCard,
-  Layers,
-  ShieldCheck,
-  Info,
-} from 'lucide-react';
-import {
   BarChart,
   Bar,
   XAxis,
@@ -13,225 +6,257 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
 } from 'recharts';
-import { behaviourChartData } from '../../data/mockData';
+import { Clock, TrendingUp } from 'lucide-react';
+import { behaviourChartData, riskDistributionData } from '../../data/mockData';
 
 export default function BehaviourAnalyticsPage() {
+  const roleAverages = [
+    { role: 'Payment Admin', baseline: 18, typicalHours: '09:00 - 18:00', maxTxn: '₹5,00,000' },
+    { role: 'Senior DBA', baseline: 22, typicalHours: '09:30 - 18:30', maxTxn: 'N/A (Read/Query)' },
+    { role: 'System Admin', baseline: 25, typicalHours: '10:00 - 19:00', maxTxn: 'N/A (Console)' },
+    { role: 'Security Analyst', baseline: 12, typicalHours: '24/7 Shift Rotation', maxTxn: 'N/A (Audit)' },
+    { role: 'Compliance Officer', baseline: 10, typicalHours: '09:00 - 17:30', maxTxn: 'N/A (Review)' },
+  ];
+
   return (
-    <div className="p-6 pb-24 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Behaviour Analytics</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 font-medium">
-              Baseline Engine
-            </span>
-          </div>
-          <p className="text-slate-400 mt-1 text-sm">
-            Continuous peer-group learning, operational baselines, and historical deviation profiles
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
+      {/* 1. Top Section: Statistical Overview */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A]">
+            Baseline Conformance Rate
+          </span>
+          <p className="text-2xl font-bold tracking-tight text-[#171717] mt-1">94.6%</p>
+          <p className="text-xs text-[#26734D] mt-0.5 flex items-center gap-1 font-medium">
+            <TrendingUp className="w-3.5 h-3.5" /> +1.2% model confidence over 90 days
+          </p>
+        </div>
+
+        <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A]">
+            Context Verification Efficiency
+          </span>
+          <p className="text-2xl font-bold tracking-tight text-[#171717] mt-1">82.4%</p>
+          <p className="text-xs text-[#6B6B6B] mt-0.5">
+            Unusual events reconciled against ITSM tickets
+          </p>
+        </div>
+
+        <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A]">
+            False Positive Suppression
+          </span>
+          <p className="text-2xl font-bold tracking-tight text-[#171717] mt-1">91.8%</p>
+          <p className="text-xs text-[#6B6B6B] mt-0.5">
+            Legitimate operational outliers automatically de-escalated
           </p>
         </div>
       </div>
 
-      {/* Baseline Requirement Explanation Card */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 flex-shrink-0 mt-0.5">
-          <Info className="w-5 h-5" />
-        </div>
+      {/* 2. Legitimate Exception vs Suspicious Threat Comparison */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-4">
         <div>
-          <h2 className="text-sm font-bold text-white mb-1">How Behavioural Baselines Work</h2>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            "The system continuously compares current privileged activity with historical behaviour profiles for the user's role.
-            Rather than relying solely on static role-based access control (RBAC), SENTINEL builds dynamic profiles covering working hours,
-            typical resource access hierarchies, recipient patterns, and transaction amounts."
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+            Contextual Intelligence Engine in Action
+          </h2>
+          <p className="text-xs text-[#6B6B6B] mt-0.5">
+            How SENTINEL distinguishes between an authorized exceptional task and an active insider threat
           </p>
         </div>
-      </div>
 
-      {/* Behaviour Deviation Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900/90 border border-green-500/30 rounded-2xl p-5 shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400 font-black text-xl">
-            82%
-          </div>
-          <div>
-            <p className="text-sm font-bold text-green-400">Normal Behaviour</p>
-            <p className="text-xs text-slate-400 mt-0.5">Activities within 95% baseline confidence interval</p>
-          </div>
-        </div>
-
-        <div className="bg-slate-900/90 border border-yellow-500/30 rounded-2xl p-5 shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 font-black text-xl">
-            13%
-          </div>
-          <div>
-            <p className="text-sm font-bold text-yellow-400">Unusual Behaviour</p>
-            <p className="text-xs text-slate-400 mt-0.5">Minor baseline variance (evaluated with context)</p>
-          </div>
-        </div>
-
-        <div className="bg-slate-900/90 border border-red-500/30 rounded-2xl p-5 shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 font-black text-xl">
-            5%
-          </div>
-          <div>
-            <p className="text-sm font-bold text-red-400">High-Risk Deviation</p>
-            <p className="text-xs text-slate-400 mt-0.5">Multivariate anomalies requiring SOC escalation</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Baseline Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Chart 1: Normal Login Time vs Anomaly */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-400" />
-              <h3 className="text-sm font-bold text-white tracking-wide">Typical Login Hours Profile</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card A: Legitimate Exception */}
+          <div className="p-4 bg-[#26734D]/5 border border-[#26734D]/25 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#26734D]/10 text-[#26734D] uppercase tracking-wider">
+                ✓ Context Verified (False Positive Prevented)
+              </span>
+              <span className="text-xs font-mono font-bold text-[#26734D]">Risk: 22/100</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-              Core: 9 AM – 6 PM
-            </span>
+
+            <div>
+              <h3 className="text-xs font-bold text-[#171717]">Off-Hours SSH Access (Rahul Verma)</h3>
+              <p className="text-xs text-[#6B6B6B] mt-0.5">
+                SysAdmin logged in at 11:00 PM to deploy an emergency kernel update.
+              </p>
+            </div>
+
+            <div className="p-2.5 bg-white border border-[#E5E3DE] rounded-lg text-xs space-y-1">
+              <div className="flex items-center justify-between text-[#6B6B6B]">
+                <span>Initial Access Anomaly:</span>
+                <span className="text-[#A87516] font-semibold">+12 Risk</span>
+              </div>
+              <div className="flex items-center justify-between text-[#6B6B6B]">
+                <span>ITSM Ticket #CHG-2026-881:</span>
+                <span className="text-[#26734D] font-semibold">-14 Risk Discount</span>
+              </div>
+              <p className="text-[11px] text-[#26734D] font-medium pt-0.5">
+                ✓ Activity scope matches approved change calendar.
+              </p>
+            </div>
           </div>
 
-          <div className="h-56 w-full">
+          {/* Card B: Suspicious Account Misuse */}
+          <div className="p-4 bg-[#C62828]/5 border border-[#C62828]/25 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C62828]/10 text-[#C62828] uppercase tracking-wider">
+                🚨 Malicious Sequence (Critical Threat)
+              </span>
+              <span className="text-xs font-mono font-bold text-[#C62828]">Risk: 92/100</span>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold text-[#171717]">Off-Hours Wire Transfer (Amit Sharma)</h3>
+              <p className="text-xs text-[#6B6B6B] mt-0.5">
+                Payment Admin modified beneficiary and executed ₹18.5L wire at 02:23 AM.
+              </p>
+            </div>
+
+            <div className="p-2.5 bg-white border border-[#E5E3DE] rounded-lg text-xs space-y-1">
+              <div className="flex items-center justify-between text-[#6B6B6B]">
+                <span>Unusual Access Time:</span>
+                <span className="text-[#C62828] font-semibold">+20 Risk</span>
+              </div>
+              <div className="flex items-center justify-between text-[#6B6B6B]">
+                <span>Beneficiary Modification + 5x Limit:</span>
+                <span className="text-[#C62828] font-semibold">+25 Risk</span>
+              </div>
+              <p className="text-[11px] text-[#C62828] font-medium pt-0.5">
+                ⚠️ Zero change ticket or second-approver authorization found.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Visual Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Access Timing Distribution Chart */}
+        <div className="lg:col-span-2 bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-[#E5E3DE]">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+                Access Timing Distribution (24 Hours)
+              </h2>
+              <p className="text-xs text-[#6B6B6B]">Aggregate login activity density across 24 privileged identities</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-[#6B6B6B]">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Core band: 09:00 – 18:00</span>
+            </div>
+          </div>
+
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={behaviourChartData.loginHours}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="hour" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px' }}
-                  labelStyle={{ color: '#94a3b8' }}
+              <BarChart data={behaviourChartData.loginHours} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E3DE" vertical={false} />
+                <XAxis
+                  dataKey="hour"
+                  tick={{ fill: '#6B6B6B', fontSize: 10 }}
+                  axisLine={{ stroke: '#E5E3DE' }}
+                  tickLine={false}
                 />
-                <Bar dataKey="frequency" radius={[4, 4, 0, 0]}>
-                  {behaviourChartData.loginHours.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.anomaly ? '#ef4444' : '#3b82f6'}
-                    />
-                  ))}
-                </Bar>
+                <YAxis
+                  tick={{ fill: '#6B6B6B', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E5E3DE',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                />
+                <Bar dataKey="frequency" name="Login Frequency" fill="#171717" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Normal Active Hours (9AM–6PM)
-            </span>
-            <span className="flex items-center gap-1.5 text-red-400 font-semibold">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Anomaly (02:15 AM Login)
-            </span>
-          </div>
         </div>
 
-        {/* Chart 2: Transaction Range Baseline */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-bold text-white tracking-wide">Average Transaction Amount Baseline</h3>
-            </div>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-              Expected: ₹50K – ₹5L
-            </span>
+        {/* Risk Distribution Breakdown */}
+        <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs space-y-4">
+          <div className="pb-2 border-b border-[#E5E3DE]">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+              Risk Tier Population
+            </h2>
+            <p className="text-xs text-[#6B6B6B]">Distribution across 24 privileged identities</p>
           </div>
 
-          <div className="h-56 w-full">
+          <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={behaviourChartData.transactionAmounts}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="range" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px' }}
-                  labelStyle={{ color: '#94a3b8' }}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {behaviourChartData.transactionAmounts.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.anomaly ? '#ef4444' : '#8b5cf6'}
-                    />
+              <PieChart>
+                <Pie
+                  data={riskDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={35}
+                  outerRadius={55}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  {riskDistributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
-                </Bar>
-              </BarChart>
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E5E3DE',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                  }}
+                />
+              </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> Standard Distribution Range
-            </span>
-            <span className="flex items-center gap-1.5 text-red-400 font-semibold">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Outlier (₹18.5L Outward Wire)
-            </span>
-          </div>
-        </div>
-      </div>
 
-      {/* Typical Resources & Beneficiaries Profile Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Typical Accessed Resources */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="w-4 h-4 text-blue-400" />
-            <h3 className="text-sm font-bold text-white tracking-wide">Typical Accessed Resources</h3>
-          </div>
-          <div className="space-y-3">
-            {[
-              { name: 'Payment Portal', freq: '98% Daily Access', normal: true },
-              { name: 'Customer Accounts System', freq: '84% Weekly Access', normal: true },
-              { name: 'Transaction Management Console', freq: '76% Regular Access', normal: true },
-              { name: 'Corporate Account #CC-8821', freq: '0.4% Rare Access (Anomalous)', normal: false },
-            ].map((res) => (
-              <div
-                key={res.name}
-                className={`p-3 rounded-xl border flex items-center justify-between ${
-                  res.normal
-                    ? 'bg-slate-800/50 border-slate-700/60'
-                    : 'bg-red-500/10 border-red-500/30 text-red-300'
-                }`}
-              >
-                <span className={`text-xs font-semibold ${res.normal ? 'text-slate-200' : 'text-red-400 font-bold'}`}>
-                  {res.name}
-                </span>
-                <span className="text-[11px] text-slate-400">{res.freq}</span>
+          <div className="space-y-1.5 text-xs text-[#6B6B6B]">
+            {riskDistributionData.map((item) => (
+              <div key={item.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span>{item.name}</span>
+                </div>
+                <span className="font-bold text-[#171717]">{item.value} Identities</span>
               </div>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Typical Trusted Beneficiaries */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck className="w-4 h-4 text-green-400" />
-            <h3 className="text-sm font-bold text-white tracking-wide">Typical Whitelisted Beneficiaries</h3>
-          </div>
-          <div className="space-y-3">
-            {[
-              { name: 'ABC Supplies Ltd', status: 'Established 3+ yrs · 142 txns', trusted: true },
-              { name: 'Tech Corp Logistics', status: 'Established 2+ yrs · 98 txns', trusted: true },
-              { name: 'Vendor Solutions India', status: 'Established 1+ yr · 45 txns', trusted: true },
-              { name: 'XYZ Holdings (NEW)', status: 'Created 02:19 AM · 0 past txns', trusted: false },
-            ].map((ben) => (
-              <div
-                key={ben.name}
-                className={`p-3 rounded-xl border flex items-center justify-between ${
-                  ben.trusted
-                    ? 'bg-slate-800/50 border-slate-700/60'
-                    : 'bg-red-500/10 border-red-500/30 text-red-300'
-                }`}
-              >
-                <span className={`text-xs font-semibold ${ben.trusted ? 'text-slate-200' : 'text-red-400 font-bold'}`}>
-                  {ben.name}
-                </span>
-                <span className="text-[11px] text-slate-400">{ben.status}</span>
-              </div>
-            ))}
-          </div>
+      {/* 4. Role Comparison Table */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+          Peer Group Role Baselines
+        </h2>
+
+        <div className="border border-[#E5E3DE] rounded-xl overflow-hidden shadow-2xs">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-[#FAFAF8] border-b border-[#E5E3DE] text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                <th className="py-2.5 px-4 font-semibold">Role Category</th>
+                <th className="py-2.5 px-4 font-semibold">Baseline Risk Score</th>
+                <th className="py-2.5 px-4 font-semibold">Expected Working Hours</th>
+                <th className="py-2.5 px-4 font-semibold text-right">Transaction Authority</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E5E3DE]">
+              {roleAverages.map((role) => (
+                <tr key={role.role} className="hover:bg-[#F6F5F2]/60 transition-colors">
+                  <td className="py-2.5 px-4 font-bold text-[#171717]">{role.role}</td>
+                  <td className="py-2.5 px-4 font-mono text-[#6B6B6B]">{role.baseline} / 100</td>
+                  <td className="py-2.5 px-4 text-[#6B6B6B]">{role.typicalHours}</td>
+                  <td className="py-2.5 px-4 text-right font-medium text-[#171717]">{role.maxTxn}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

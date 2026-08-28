@@ -1,195 +1,198 @@
-import { useState, useMemo } from 'react';
-import { Activity, Search, Filter, MapPin, Monitor } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Filter, ChevronDown, ChevronUp, MapPin, Laptop } from 'lucide-react';
 import { mockActivities } from '../../data/mockData';
-
-const statusBadge: Record<string, string> = {
-  NORMAL: 'bg-green-500/15 text-green-400 border border-green-500/30',
-  UNUSUAL: 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30',
-  SUSPICIOUS: 'bg-orange-500/15 text-orange-400 border border-orange-500/30',
-  CRITICAL: 'bg-red-500/15 text-red-400 border border-red-500/30',
-};
-
-const riskColor = (score: number) =>
-  score >= 81 ? 'text-red-400' :
-  score >= 61 ? 'text-orange-400' :
-  score >= 31 ? 'text-yellow-400' : 'text-green-400';
 
 export default function ActivityPage() {
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const filterOptions = ['ALL', 'NORMAL', 'UNUSUAL', 'SUSPICIOUS', 'CRITICAL'];
+  const filtered = mockActivities.filter((act) => {
+    const matchesSearch =
+      act.userName.toLowerCase().includes(search.toLowerCase()) ||
+      act.action.toLowerCase().includes(search.toLowerCase()) ||
+      act.resource.toLowerCase().includes(search.toLowerCase()) ||
+      act.ipAddress.includes(search);
+    const matchesStatus = statusFilter === 'ALL' || act.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  const filtered = useMemo(() => {
-    return mockActivities.filter((a) => {
-      const matchesSearch =
-        a.userName.toLowerCase().includes(search.toLowerCase()) ||
-        a.action.toLowerCase().includes(search.toLowerCase()) ||
-        a.resource.toLowerCase().includes(search.toLowerCase());
-      const matchesFilter = filterStatus === 'ALL' || a.status === filterStatus;
-      return matchesSearch && matchesFilter;
-    });
-  }, [search, filterStatus]);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'CRITICAL':
+        return 'bg-[#C62828]/10 text-[#C62828] border-[#C62828]/25';
+      case 'SUSPICIOUS':
+        return 'bg-[#C65D21]/10 text-[#C65D21] border-[#C65D21]/25';
+      case 'UNUSUAL':
+        return 'bg-[#A87516]/10 text-[#A87516] border-[#A87516]/25';
+      default:
+        return 'bg-[#26734D]/10 text-[#26734D] border-[#26734D]/25';
+    }
+  };
+
+  const getRiskColor = (score: number) => {
+    if (score >= 81) return 'text-[#C62828]';
+    if (score >= 61) return 'text-[#C65D21]';
+    if (score >= 31) return 'text-[#A87516]';
+    return 'text-[#26734D]';
+  };
 
   return (
-    <div className="p-6 pb-20">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Activity Monitor</h1>
-          <p className="text-slate-400 mt-1 text-sm">
-            Real-time log of all privileged user actions across systems
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-xs text-green-400 font-medium">Live Feed</span>
-        </div>
-      </div>
-
-      {/* Stats summary */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
-        {[
-          { label: 'Total Events', value: mockActivities.length, color: 'text-white' },
-          { label: 'Normal', value: mockActivities.filter((a) => a.status === 'NORMAL').length, color: 'text-green-400' },
-          { label: 'Suspicious', value: mockActivities.filter((a) => a.status === 'SUSPICIOUS' || a.status === 'UNUSUAL').length, color: 'text-yellow-400' },
-          { label: 'Critical', value: mockActivities.filter((a) => a.status === 'CRITICAL').length, color: 'text-red-400' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-slate-900 border border-slate-700/50 rounded-xl p-4 text-center">
-            <p className={`text-2xl font-bold ${color}`}>{value}</p>
-            <p className="text-xs text-slate-400 mt-1">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
+      {/* Header Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-[#8A8A8A] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by user, action, or resource..."
+            placeholder="Search action, user, resource, IP address..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all"
+            className="w-full bg-white border border-[#E5E3DE] rounded-xl pl-9 pr-4 py-2 text-xs text-[#171717] placeholder-[#8A8A8A] focus:outline-none focus:ring-1 focus:ring-[#171717]"
           />
         </div>
-        <Filter className="w-4 h-4 text-slate-500" />
-        <div className="flex gap-1.5">
-          {filterOptions.map((opt) => (
+
+        {/* Filters */}
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-[#8A8A8A] mr-1" />
+          {['ALL', 'NORMAL', 'UNUSUAL', 'SUSPICIOUS', 'CRITICAL'].map((st) => (
             <button
-              key={opt}
-              onClick={() => setFilterStatus(opt)}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                filterStatus === opt
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                statusFilter === st
+                  ? 'bg-[#171717] text-white shadow-2xs'
+                  : 'bg-white border border-[#E5E3DE] text-[#6B6B6B] hover:text-[#171717]'
               }`}
             >
-              {opt}
+              {st}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-[100px_1fr_1fr_1fr_80px_80px_90px] gap-4 px-4 py-3 border-b border-slate-700/50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          <span>Time</span>
-          <span>User</span>
-          <span>Action</span>
-          <span>Resource</span>
-          <span>Location</span>
-          <span>Risk</span>
-          <span>Status</span>
+      {/* Activity Table */}
+      <div className="bg-white border border-[#E5E3DE] rounded-xl shadow-2xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-[#FAFAF8] border-b border-[#E5E3DE] text-[11px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                <th className="py-3.5 px-4 font-semibold">Timestamp</th>
+                <th className="py-3.5 px-4 font-semibold">Identity</th>
+                <th className="py-3.5 px-4 font-semibold">Action Executed</th>
+                <th className="py-3.5 px-4 font-semibold">Resource / Target</th>
+                <th className="py-3.5 px-4 font-semibold">Risk Score</th>
+                <th className="py-3.5 px-4 font-semibold">Status</th>
+                <th className="py-3.5 px-4 font-semibold text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E5E3DE]">
+              {filtered.map((act) => {
+                const isExpanded = expandedId === act.id;
+
+                return (
+                  <>
+                    <tr
+                      key={act.id}
+                      onClick={() => setExpandedId(isExpanded ? null : act.id)}
+                      className="hover:bg-[#F6F5F2]/80 cursor-pointer transition-colors"
+                    >
+                      {/* Timestamp */}
+                      <td className="py-3 px-4 font-mono text-[#6B6B6B] text-[11px]">
+                        {act.timestamp}
+                      </td>
+
+                      {/* Identity */}
+                      <td className="py-3 px-4 font-bold text-[#171717]">
+                        {act.userName}
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3 px-4 text-[#171717]">
+                        <p className="font-medium">{act.action}</p>
+                        {act.amount && (
+                          <span className="text-[11px] font-semibold text-[#C62828]">
+                            Amount: ₹{(act.amount).toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Resource */}
+                      <td className="py-3 px-4 font-mono text-[11px] text-[#6B6B6B]">
+                        {act.resource}
+                      </td>
+
+                      {/* Risk Score */}
+                      <td className="py-3 px-4 font-mono font-bold">
+                        <span className={getRiskColor(act.riskScore)}>{act.riskScore}</span>
+                        <span className="text-[#8A8A8A] font-normal text-[11px]"> / 100</span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${getStatusBadge(
+                            act.status
+                          )}`}
+                        >
+                          {act.status}
+                        </span>
+                      </td>
+
+                      {/* Toggle */}
+                      <td className="py-3 px-4 text-right text-[#8A8A8A]">
+                        {isExpanded ? <ChevronUp className="w-4 h-4 inline" /> : <ChevronDown className="w-4 h-4 inline" />}
+                      </td>
+                    </tr>
+
+                    {/* Expandable Forensic Details */}
+                    {isExpanded && (
+                      <tr className="bg-[#FAFAF8] border-b border-[#E5E3DE]">
+                        <td colSpan={7} className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            <div className="p-3 bg-white border border-[#E5E3DE] rounded-lg space-y-1">
+                              <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">
+                                Behaviour Risk Reason
+                              </span>
+                              <p className="text-[#171717] font-medium leading-relaxed">
+                                {act.riskReason}
+                              </p>
+                            </div>
+
+                            <div className="p-3 bg-white border border-[#E5E3DE] rounded-lg space-y-1">
+                              <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">
+                                Network & Client Device
+                              </span>
+                              <div className="flex items-center gap-1.5 text-[#6B6B6B] mt-0.5">
+                                <Laptop className="w-3.5 h-3.5" />
+                                <span>{act.device}</span>
+                              </div>
+                              <p className="font-mono text-[#8A8A8A] text-[11px]">IP: {act.ipAddress}</p>
+                            </div>
+
+                            <div className="p-3 bg-white border border-[#E5E3DE] rounded-lg space-y-1">
+                              <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">
+                                Geo Location & Geofence
+                              </span>
+                              <div className="flex items-center gap-1.5 text-[#6B6B6B] mt-0.5">
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{act.location}</span>
+                              </div>
+                              <span className="inline-block text-[10px] font-semibold text-[#26734D]">
+                                ✓ Corporate VPN Gateway Verified
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-
-        {filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <Activity className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium">No activities found</p>
-            <p className="text-slate-600 text-sm mt-1">Try adjusting your search or filter</p>
-          </div>
-        ) : (
-          <div>
-            {filtered.map((activity) => (
-              <div key={activity.id}>
-                <div
-                  onClick={() => setExpandedId(expandedId === activity.id ? null : activity.id)}
-                  className={`grid grid-cols-[100px_1fr_1fr_1fr_80px_80px_90px] gap-4 px-4 py-3 border-b border-slate-800/50 cursor-pointer hover:bg-slate-800/30 transition-all ${
-                    expandedId === activity.id ? 'bg-slate-800/50' : ''
-                  } ${
-                    activity.status === 'CRITICAL' ? 'border-l-2 border-l-red-500/50' :
-                    activity.status === 'SUSPICIOUS' ? 'border-l-2 border-l-orange-500/50' :
-                    activity.status === 'UNUSUAL' ? 'border-l-2 border-l-yellow-500/50' : ''
-                  }`}
-                >
-                  <span className="text-xs text-slate-400 font-mono">{activity.timestamp}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
-                      {activity.userName.split(' ').map((n) => n[0]).join('')}
-                    </div>
-                    <span className="text-sm text-white font-medium truncate">{activity.userName}</span>
-                  </div>
-                  <span className="text-sm text-slate-300 truncate">{activity.action}</span>
-                  <span className="text-sm text-slate-400 truncate">{activity.resource}</span>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-600" />
-                    <span className="text-xs text-slate-500 truncate">{activity.location.split(',')[0]}</span>
-                  </div>
-                  <span className={`text-sm font-bold ${riskColor(activity.riskScore)}`}>
-                    +{activity.riskScore}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge[activity.status]}`}>
-                    {activity.status}
-                  </span>
-                </div>
-
-                {/* Expanded detail */}
-                {expandedId === activity.id && (
-                  <div className="px-6 py-4 bg-slate-800/30 border-b border-slate-700/50">
-                    <div className="grid grid-cols-3 gap-4 text-xs">
-                      <div>
-                        <p className="text-slate-500 mb-1">IP Address</p>
-                        <p className="text-slate-300 font-mono">{activity.ipAddress}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 mb-1">Device</p>
-                        <div className="flex items-center gap-1">
-                          <Monitor className="w-3 h-3 text-slate-500" />
-                          <p className="text-slate-300">{activity.device}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 mb-1">Full Location</p>
-                        <p className="text-slate-300">{activity.location}</p>
-                      </div>
-                      <div className="col-span-3">
-                        <p className="text-slate-500 mb-1">Risk Reason</p>
-                        <p className={`font-medium ${riskColor(activity.riskScore)}`}>
-                          {activity.riskReason}
-                        </p>
-                      </div>
-                      {activity.beneficiary && (
-                        <div>
-                          <p className="text-slate-500 mb-1">Beneficiary</p>
-                          <p className="text-slate-300">{activity.beneficiary}</p>
-                        </div>
-                      )}
-                      {activity.amount && (
-                        <div>
-                          <p className="text-slate-500 mb-1">Amount</p>
-                          <p className="text-red-400 font-bold">₹{activity.amount.toLocaleString('en-IN')}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ const stageLabels: Record<number, string> = {
 
 export default function DemoControlPanel() {
   const { demoState, pauseDemo, nextStep, resetDemo } = useApp();
-  const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoPlayRef = useRef<any>(null);
 
   const isRunning = demoState.isRunning;
   const isPaused = demoState.isPaused;
@@ -28,7 +28,7 @@ export default function DemoControlPanel() {
     if (isRunning && !isPaused && stage < 8) {
       autoPlayRef.current = setTimeout(() => {
         nextStep();
-      }, 2500);
+      }, 3000);
     }
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
@@ -40,68 +40,78 @@ export default function DemoControlPanel() {
   }
 
   return (
-    <div className="fixed bottom-10 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <div className="bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl p-4 w-80 backdrop-blur-md">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Demo Control</span>
+    <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="bg-white border border-[#E5E3DE] rounded-xl shadow-xl p-4 w-80 text-[#171717]">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#E5E3DE]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#171717] animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#171717]">
+              Simulation Control
+            </span>
+          </div>
+
           {scenarioType && (
-            <span className={`ml-auto text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-              scenarioType === 'suspicious'
-                ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                : 'bg-green-500/20 text-green-400 border border-green-500/30'
-            }`}>
-              {scenarioType === 'suspicious' ? '⚠ Suspicious' : '✓ Legitimate'}
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider ${
+                scenarioType === 'suspicious'
+                  ? 'bg-[#C62828]/10 text-[#C62828] border border-[#C62828]/20'
+                  : 'bg-[#26734D]/10 text-[#26734D] border border-[#26734D]/20'
+              }`}
+            >
+              {scenarioType === 'suspicious' ? 'Suspicious' : 'Legitimate'}
             </span>
           )}
         </div>
 
-        {/* Progress */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-            <span className="font-semibold text-slate-300">Step {stage} of 8</span>
-            <span className="text-blue-400 font-medium">{stageLabels[stage] || 'Complete'}</span>
+        {/* Progress Strip */}
+        <div className="mb-3.5 space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#6B6B6B]">Step {stage} of 8</span>
+            <span className="font-semibold text-[#171717] truncate max-w-[140px]">
+              {stageLabels[stage]}
+            </span>
           </div>
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden p-0.5">
+          <div className="h-1.5 bg-[#F0EFEA] rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                scenarioType === 'legitimate' ? 'bg-green-500' : stage >= 6 ? 'bg-red-500' : 'bg-blue-500'
-              }`}
-              style={{ width: `${Math.min(100, (stage / 8) * 100)}%` }}
+              className="h-full bg-[#171717] rounded-full transition-all duration-500"
+              style={{ width: `${(stage / 8) * 100}%` }}
             />
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Buttons */}
         <div className="flex items-center gap-2">
           <button
             onClick={pauseDemo}
             disabled={stage >= 8}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-semibold text-white transition-all disabled:opacity-40"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-[#F6F5F2] hover:bg-[#EBE9E4] border border-[#E5E3DE] rounded-lg text-xs font-semibold text-[#171717] transition-all disabled:opacity-40"
           >
             {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-            {isPaused ? 'Auto Play' : 'Pause'}
+            <span>{isPaused ? 'Resume' : 'Pause'}</span>
           </button>
+
           <button
             onClick={nextStep}
             disabled={stage >= 8}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-semibold text-white transition-all disabled:opacity-40 shadow-sm"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-[#171717] hover:bg-[#2E2E2E] rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-40 shadow-sm"
           >
             <SkipForward className="w-3.5 h-3.5" />
-            Next Event →
+            <span>Next Step</span>
           </button>
+
           <button
             onClick={resetDemo}
-            className="p-2 bg-slate-800 hover:bg-red-500/20 hover:text-red-400 border border-slate-600 rounded-xl text-slate-400 transition-all"
-            title="Reset Demo"
+            className="p-2 bg-[#F6F5F2] hover:bg-[#C62828]/10 hover:text-[#C62828] border border-[#E5E3DE] rounded-lg text-[#6B6B6B] transition-all"
+            title="Reset Simulation"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {stage >= 8 && (
-          <div className="mt-2.5 text-center">
-            <p className="text-xs text-green-400 font-semibold">✓ Demo Scenario Completed</p>
+          <div className="mt-2.5 pt-2 border-t border-[#E5E3DE] text-center">
+            <p className="text-xs font-semibold text-[#26734D]">✓ Simulation Sequence Complete</p>
           </div>
         )}
       </div>
