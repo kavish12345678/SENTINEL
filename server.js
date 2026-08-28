@@ -20,7 +20,7 @@ app.use(express.json());
 // Helper for HTTPS Telegram API calls
 function callTelegramApi(endpoint, payload = null) {
   return new Promise((resolve, reject) => {
-    const token = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8').trim();
+    const token = (process.env.TELEGRAM_BOT_TOKEN || 'bot_token').trim();
     const postData = payload ? JSON.stringify(payload) : null;
 
     const options = {
