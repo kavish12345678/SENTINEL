@@ -16,33 +16,33 @@ export default function RiskBadge({
   size = 'md',
 }: RiskBadgeProps) {
   const badgeStyles: Record<RiskLevel, string> = {
-    LOW: 'bg-[#26734D]/10 text-[#26734D] border-[#26734D]/25',
-    MEDIUM: 'bg-[#A87516]/10 text-[#A87516] border-[#A87516]/25',
-    HIGH: 'bg-[#C65D21]/10 text-[#C65D21] border-[#C65D21]/25',
-    CRITICAL: 'bg-[#C62828]/10 text-[#C62828] border-[#C62828]/25 font-semibold',
+    LOW: 'bg-[#20201a] text-[#c7c7bf] border-[#464742]',
+    MEDIUM: 'bg-[#5f4504]/30 text-[#e8c178] border-[#e8c178]/40',
+    HIGH: 'bg-[#812627]/30 text-[#ffb3af] border-[#ffb3af]/40',
+    CRITICAL: 'bg-[#93000a]/40 text-[#ffb4ab] border-[#ffb4ab] font-bold shadow-[0_0_8px_rgba(255,180,171,0.2)]',
   };
 
   const dotStyles: Record<RiskLevel, string> = {
-    LOW: 'bg-[#26734D]',
-    MEDIUM: 'bg-[#A87516]',
-    HIGH: 'bg-[#C65D21]',
-    CRITICAL: 'bg-[#C62828]',
+    LOW: 'bg-[#91918a]',
+    MEDIUM: 'bg-[#e8c178]',
+    HIGH: 'bg-[#ffb3af]',
+    CRITICAL: 'bg-[#ffb4ab] animate-pulse',
   };
 
   const sizeClasses = {
-    sm: 'text-[11px] px-2 py-0.5',
-    md: 'text-xs px-2.5 py-1',
-    lg: 'text-sm px-3 py-1.5',
+    sm: 'text-[10px] px-2 py-0.5 font-mono',
+    md: 'text-xs px-2.5 py-1 font-mono',
+    lg: 'text-sm px-3 py-1.5 font-mono',
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md border font-medium uppercase tracking-wider ${badgeStyles[level]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-xs border uppercase tracking-wider ${badgeStyles[level]} ${sizeClasses[size]} ${className}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${dotStyles[level]}`} />
       <span>{level}</span>
       {showScore && score !== undefined && (
-        <span className="opacity-75 font-mono">({score})</span>
+        <span className="opacity-80">({score})</span>
       )}
     </span>
   );

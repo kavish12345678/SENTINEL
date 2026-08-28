@@ -1,5 +1,16 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import {
+  AlertTriangle,
+  User,
+  History,
+  LogIn,
+  FolderOpen,
+  Edit3,
+  Repeat,
+  ArrowRight,
+  MapPin,
+  ShieldAlert,
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export default function InvestigationPage() {
@@ -7,228 +18,248 @@ export default function InvestigationPage() {
   const { incident } = useApp();
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
-      {/* 1. Case Header Banner */}
-      <div className="bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E5E3DE]">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#C62828] text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              AS
-            </div>
+    <div className="space-y-4 max-w-7xl mx-auto pb-16 font-sans select-none">
+      {/* Top Workspace Header (Incident Context) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1c1c16] border border-[#464742] p-4 rounded-xs">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs font-bold text-[#e5e2d9] px-2 py-0.5 bg-[#20201a] border border-[#464742]">
+              {incident.caseId}
+            </span>
+            <div className="h-3 w-px bg-[#464742]" />
+            <span className="font-mono text-xs font-bold text-[#ffb4ab] tracking-widest uppercase flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              CRITICAL THREAT
+            </span>
+          </div>
+          <h1 className="font-mono text-lg font-bold text-[#e5e2d9] flex items-center gap-2 mt-0.5">
+            <User className="w-4 h-4 text-[#c7c7bf]" />
+            {incident.userName}
+            <span className="text-[#91918a] text-xs font-normal ml-2">SUBJECT ID: U-99281-AS · PAM LEVEL 4</span>
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/response')}
+            className="px-4 py-2 border border-[#464742] bg-[#20201a] hover:bg-[#2a2a24] text-[#e5e2d9] font-mono text-xs font-semibold uppercase tracking-wider transition-colors"
+          >
+            [ ESCALATE ]
+          </button>
+          <button
+            onClick={() => navigate('/response')}
+            className="px-4 py-2 bg-[#e5e2df] text-[#1c1c1a] font-mono text-xs font-bold uppercase tracking-wider hover:bg-white transition-colors shadow-sm"
+          >
+            [ LOCK ACCOUNT / MITIGATE ]
+          </button>
+        </div>
+      </div>
+
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left: Incident Story Timeline (Spans 7 cols) */}
+        <div className="lg:col-span-7 bg-[#1c1c16] border border-[#464742] p-6 relative overflow-hidden rounded-xs flex flex-col">
+          {/* Tactical Corner Marks */}
+          <div className="tactical-corner-tl" />
+          <div className="tactical-corner-br" />
+
+          {/* Title Header */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#464742]">
+            <h2 className="font-mono text-xs font-bold tracking-widest text-[#e5e2d9] uppercase flex items-center gap-2">
+              <History className="w-4 h-4 text-[#e8c178]" />
+              INCIDENT STORY // THE BEHAVIORAL THREAD
+            </h2>
+            <span className="font-mono text-[11px] text-[#91918a]">TIMEFRAME: -8 MINS</span>
+          </div>
+
+          {/* Correlation Banner */}
+          <div className="mb-6 p-3 border border-[#ffb4ab]/40 bg-[#93000a]/15 flex items-start gap-3 rounded-xs">
+            <ShieldAlert className="w-4 h-4 text-[#ffb4ab] mt-0.5 flex-shrink-0" />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-[#171717]">{incident.caseId}</h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#C62828]/10 text-[#C62828] border border-[#C62828]/25 uppercase tracking-wider">
-                  Critical Threat
-                </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-neutral-100 border border-neutral-200 text-[#6B6B6B]">
-                  Status: Open Investigation
-                </span>
-              </div>
-              <p className="text-xs text-[#6B6B6B] mt-0.5">
-                Identity: <span className="font-semibold text-[#171717]">{incident.userName}</span> · Role: Payment Administrator · Department: Treasury Ops
+              <h3 className="font-mono text-xs font-bold text-[#ffb4ab] uppercase mb-0.5">
+                CORRELATION DETECTED
+              </h3>
+              <p className="text-xs text-[#c7c7bf]">
+                5 correlated events within 8 minutes. Significant deviation from historical 90-day baseline.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 self-start md:self-auto">
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-[#8A8A8A]">Assessed Risk</span>
-              <p className="text-2xl font-bold font-mono text-[#C62828]">92 / 100</p>
+          {/* Vertical Timeline Nodes */}
+          <div className="relative pl-3 space-y-6 before:absolute before:left-[19px] before:top-3 before:bottom-3 before:w-px before:border-l before:border-dashed before:border-[#ffb4ab]/50">
+            {/* Node 1 */}
+            <div className="relative flex gap-4 z-10 group">
+              <div className="w-7 h-7 rounded-full bg-[#20201a] border border-[#464742] flex items-center justify-center shrink-0 mt-0.5 group-hover:border-[#e8c178] transition-colors">
+                <LogIn className="w-3.5 h-3.5 text-[#c7c7bf]" />
+              </div>
+              <div className="flex-1 bg-[#20201a] border border-[#464742] p-3 rounded-xs group-hover:border-[#e8c178] transition-colors">
+                <div className="flex justify-between items-center mb-1 font-mono text-xs">
+                  <span className="font-bold text-[#e5e2d9]">01. UNUSUAL LOGIN</span>
+                  <span className="text-[#91918a]">02:15:04Z</span>
+                </div>
+                <p className="text-xs text-[#c7c7bf]">
+                  Authentication successful outside normal 9AM–6PM shift window. Novel device fingerprint.
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={() => navigate('/response')}
-              className="px-4 py-2 bg-[#C62828] hover:bg-[#A31D1D] text-white text-xs font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 transition-all"
-            >
-              <span>Execute Mitigation</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
+            {/* Node 2 */}
+            <div className="relative flex gap-4 z-10 group">
+              <div className="w-7 h-7 rounded-full bg-[#20201a] border border-[#464742] flex items-center justify-center shrink-0 mt-0.5 group-hover:border-[#e8c178] transition-colors">
+                <FolderOpen className="w-3.5 h-3.5 text-[#c7c7bf]" />
+              </div>
+              <div className="flex-1 bg-[#20201a] border border-[#464742] p-3 rounded-xs group-hover:border-[#e8c178] transition-colors">
+                <div className="flex justify-between items-center mb-1 font-mono text-xs">
+                  <span className="font-bold text-[#e5e2d9]">02. RESOURCE ACCESS</span>
+                  <span className="text-[#91918a]">02:17:22Z</span>
+                </div>
+                <p className="text-xs text-[#c7c7bf]">
+                  Accessed corporate treasury account #CC-8821 without standard navigation path.
+                </p>
+              </div>
+            </div>
 
-        {/* Quick Meta Info */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-[#6B6B6B]">
-          <div>
-            <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">Case Opened</span>
-            <p className="font-medium text-[#171717] mt-0.5">28/08/2026, 02:23 AM</p>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">Target Entity</span>
-            <p className="font-medium text-[#171717] mt-0.5">XYZ Holdings (#BEN-9921)</p>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">Amount At Risk</span>
-            <p className="font-bold text-[#C62828] mt-0.5">₹18,50,000 INR</p>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase text-[#8A8A8A]">Recommended Action</span>
-            <p className="font-bold text-[#171717] mt-0.5">SUSPEND TRANSACTION</p>
-          </div>
-        </div>
-      </div>
+            {/* Node 3 */}
+            <div className="relative flex gap-4 z-10 group">
+              <div className="w-7 h-7 rounded-full bg-[#5f4504]/40 border border-[#e8c178] flex items-center justify-center shrink-0 mt-0.5">
+                <Edit3 className="w-3.5 h-3.5 text-[#e8c178]" />
+              </div>
+              <div className="flex-1 bg-[#20201a] border border-[#e8c178]/50 p-3 rounded-xs">
+                <div className="flex justify-between items-center mb-1 font-mono text-xs">
+                  <span className="font-bold text-[#e8c178]">03. BENEFICIARY MODIFIED</span>
+                  <span className="text-[#e8c178]">02:19:10Z</span>
+                </div>
+                <p className="text-xs text-[#c7c7bf]">
+                  Pre-existing vendor 'ABC Supplies' modified to unrecognised beneficiary 'XYZ Holdings'.
+                </p>
+              </div>
+            </div>
 
-      {/* 2. Split Investigation View */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT: Investigation Timeline (7 cols) */}
-        <div className="lg:col-span-7 bg-white border border-[#E5E3DE] rounded-xl p-6 shadow-2xs space-y-6">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
-              Sequential Investigation Timeline
-            </h2>
-            <p className="text-xs text-[#6B6B6B] mt-0.5">
-              Chronological execution order correlating individual actions into an insider threat sequence
-            </p>
-          </div>
+            {/* Node 4 */}
+            <div className="relative flex gap-4 z-10 group">
+              <div className="w-7 h-7 rounded-full bg-[#93000a]/40 border border-[#ffb4ab] flex items-center justify-center shrink-0 mt-0.5">
+                <Repeat className="w-3.5 h-3.5 text-[#ffb4ab]" />
+              </div>
+              <div className="flex-1 bg-[#20201a] border border-[#ffb4ab]/50 p-3 rounded-xs">
+                <div className="flex justify-between items-center mb-1 font-mono text-xs">
+                  <span className="font-bold text-[#ffb4ab]">04. LIMIT CHANGED (5X)</span>
+                  <span className="text-[#ffb4ab]">02:21:45Z</span>
+                </div>
+                <div className="flex items-center gap-3 font-mono text-xs mt-1">
+                  <span className="text-[#91918a] line-through">₹5,00,000</span>
+                  <ArrowRight className="w-3 h-3 text-[#91918a]" />
+                  <span className="text-[#ffb4ab] font-bold">₹25,00,000</span>
+                </div>
+                <p className="text-xs text-[#c7c7bf] mt-1 pt-1 border-t border-[#464742]/40">
+                  Single-analyst authorization elevation without second approver quorum.
+                </p>
+              </div>
+            </div>
 
-          {/* Vertical Timeline */}
-          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E5E3DE]">
-            {[
-              {
-                time: '02:15 AM',
-                tag: 'LOGIN',
-                title: 'Unusual Access Time',
-                desc: 'User authenticated to corporate payment server outside standard operating hours (09:00–18:00).',
-                risk: '+20',
-              },
-              {
-                time: '02:17 AM',
-                tag: 'RESOURCE ACCESS',
-                title: 'Unusual Account Access',
-                desc: 'Corporate treasury account #CC-8821 accessed. Identity has zero historical access in past 90 days.',
-                risk: '+15',
-              },
-              {
-                time: '02:19 AM',
-                tag: 'BENEFICIARY CHANGE',
-                title: 'New Beneficiary Introduced',
-                desc: 'Pre-existing vendor ABC Supplies modified to new external entity XYZ Holdings.',
-                risk: '+15',
-              },
-              {
-                time: '02:21 AM',
-                tag: 'LIMIT CHANGE',
-                title: 'Transaction Limit Increased',
-                desc: 'Single-approver threshold elevated 5× from ₹5,00,000 → ₹25,00,000 without multi-party quorum.',
-                risk: '+10',
-              },
-              {
-                time: '02:23 AM',
-                tag: 'PAYMENT',
-                title: 'Large Payment Initiated',
-                desc: 'Outward wire transfer of ₹18,50,000 initiated to the newly modified beneficiary.',
-                risk: '+12',
-              },
-            ].map((event) => (
-              <div key={event.time} className="relative group">
-                {/* Node Dot */}
-                <div className="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-[#171717] border-2 border-white ring-2 ring-[#E5E3DE]" />
-
-                <div className="bg-[#FAFAF8] border border-[#E5E3DE] rounded-xl p-4 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono font-bold text-[#171717]">{event.time}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-200 text-[#171717]">
-                        {event.tag}
-                      </span>
-                      <span className="font-mono font-bold text-[#C62828] text-[11px]">{event.risk}</span>
-                    </div>
-                  </div>
-                  <h3 className="text-xs font-bold text-[#171717]">{event.title}</h3>
-                  <p className="text-xs text-[#6B6B6B] leading-relaxed">{event.desc}</p>
+            {/* Node 5 */}
+            <div className="relative flex gap-4 z-10 group">
+              <div className="w-7 h-7 rounded-full bg-[#ffb4ab] flex items-center justify-center shrink-0 mt-0.5 relative shadow-[0_0_12px_rgba(255,180,171,0.6)]">
+                <span className="font-mono text-xs font-bold text-[#690005]">!</span>
+              </div>
+              <div className="flex-1 bg-[#20201a] border-2 border-[#ffb4ab] p-4 rounded-xs relative">
+                <div className="flex justify-between items-center mb-1 font-mono text-xs">
+                  <span className="font-bold text-[#ffb4ab] uppercase">05. PAYMENT INITIATED</span>
+                  <span className="text-[#ffb4ab] font-bold">02:23:01Z</span>
+                </div>
+                <h4 className="font-mono text-xl font-bold text-[#e5e2d9] my-1">₹18,50,000 INR</h4>
+                <p className="text-xs text-[#c7c7bf]">
+                  Wire transfer to 'XYZ Holdings' pending settlement gateway.
+                </p>
+                <div className="mt-3 pt-2 border-t border-[#464742] flex justify-end">
+                  <button
+                    onClick={() => navigate('/response')}
+                    className="px-3 py-1 bg-[#93000a] text-[#ffdad6] font-mono text-[11px] font-bold uppercase hover:bg-[#ffb4ab] hover:text-[#690005] transition-colors rounded-xs"
+                  >
+                    HALT TRANSACTION →
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Sequence Correlated Flag */}
-          <div className="p-4 bg-[#C62828]/5 border border-[#C62828]/25 rounded-xl space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#C62828]">
-              ⚠️ Critical Sequence Correlation
-            </span>
-            <p className="text-xs text-[#171717]">
-              While individual actions may appear authorized within PAM access policies, their combined sequence within an 8-minute window strongly correlates with malicious privileged misuse.
-            </p>
+            </div>
           </div>
         </div>
 
-        {/* RIGHT: Risk Assessment & Behavioural Assessment (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Risk Factor Breakdown */}
-          <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E5E3DE]">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
-                Risk Factor Weights
-              </h2>
-              <span className="text-xs font-mono font-bold text-[#C62828]">Total: 92/100</span>
+        {/* Right: Context & Spatial Divergence (Spans 5 cols) */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          {/* Top Widget: Risk Posture */}
+          <div className="bg-[#1c1c16] border border-[#464742] p-5 rounded-xs space-y-4">
+            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#c7c7bf] border-b border-[#464742] pb-2">
+              RISK POSTURE ATTRIBUTION
+            </h3>
+
+            {/* Risk Pressure Scale */}
+            <div className="flex items-end gap-1.5 h-8">
+              <div className="flex-1 bg-[#20201a] h-[20%] border-t border-[#464742]" />
+              <div className="flex-1 bg-[#20201a] h-[40%] border-t border-[#464742]" />
+              <div className="flex-1 bg-[#20201a] h-[60%] border-t border-[#464742]" />
+              <div className="flex-1 bg-[#5f4504] h-[80%] border-t border-[#e8c178]" />
+              <div className="flex-1 bg-[#93000a] h-[100%] border-t border-[#ffb4ab] animate-pulse" />
             </div>
 
-            <div className="space-y-3">
-              {[
-                { label: 'Unusual Access Time', weight: 20, pct: 20 },
-                { label: 'Unusual Resource Access', weight: 15, pct: 15 },
-                { label: 'New Beneficiary Introduced', weight: 15, pct: 15 },
-                { label: 'Limit Increase (5×)', weight: 10, pct: 10 },
-                { label: 'Large Outward Transaction', weight: 12, pct: 12 },
-                { label: 'Suspicious Sequence Correlation', weight: 10, pct: 10 },
-                { label: 'Baseline Prior History', weight: 10, pct: 10 },
-              ].map((factor) => (
-                <div key={factor.label} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6B6B6B]">{factor.label}</span>
-                    <span className="font-mono font-bold text-[#171717]">+{factor.weight}</span>
-                  </div>
-                  <div className="h-1.5 bg-[#F0EFEA] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#171717] rounded-full"
-                      style={{ width: `${(factor.pct / 20) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-4 pt-2 font-mono">
+              <div className="p-2.5 bg-[#20201a] border border-[#464742] rounded-xs">
+                <span className="text-[10px] text-[#91918a] uppercase block">SCORE</span>
+                <span className="text-xl font-bold text-[#ffb4ab]">92 / 100</span>
+              </div>
+              <div className="p-2.5 bg-[#20201a] border border-[#464742] rounded-xs">
+                <span className="text-[10px] text-[#91918a] uppercase block">VELOCITY</span>
+                <span className="text-xl font-bold text-[#e5e2d9]">+42 p/hr</span>
+              </div>
             </div>
           </div>
 
-          {/* Normal vs Current Comparison */}
-          <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E5E3DE]">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#171717]">
-                Baseline Comparison
-              </h2>
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#C62828]/10 text-[#C62828] border border-[#C62828]/25">
-                Significant Deviation
+          {/* Bottom Widget: Spatial Divergence Map */}
+          <div className="flex-1 bg-[#1c1c16] border border-[#464742] p-5 rounded-xs flex flex-col space-y-3">
+            <div className="flex justify-between items-center border-b border-[#464742] pb-2 font-mono text-xs">
+              <span className="font-bold text-[#c7c7bf] uppercase">SPATIAL DIVERGENCE</span>
+              <span className="text-[10px] text-[#ffb4ab] bg-[#93000a]/30 px-2 py-0.5 border border-[#ffb4ab]/30">
+                NORMAL vs CURRENT
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-[#26734D]/5 border border-[#26734D]/25 rounded-lg space-y-1">
-                <span className="text-[10px] font-bold uppercase text-[#26734D]">
-                  Normal Baseline
+            {/* Dark Forensic Map Simulation */}
+            <div className="flex-1 min-h-[220px] bg-[#0e0e0a] border border-[#464742] rounded-xs relative overflow-hidden p-4 micro-grid">
+              {/* Historical Pattern */}
+              <div className="absolute top-[25%] left-[30%] w-24 h-24 border border-[#464742] rounded-full flex items-center justify-center opacity-60">
+                <div className="w-12 h-12 bg-[#20201a] rounded-full border border-[#464742] animate-pulse" />
+                <span className="absolute -top-5 font-mono text-[9px] text-[#91918a] whitespace-nowrap">
+                  HISTORICAL BASELINE (Delhi)
                 </span>
-                <p className="text-[#171717] font-medium">09:00 – 18:00</p>
-                <p className="text-[11px] text-[#6B6B6B]">Regular transactions (₹2L–₹5L)</p>
-                <p className="text-[11px] text-[#6B6B6B]">Known vendors: ABC Supplies</p>
               </div>
 
-              <div className="p-3 bg-[#C62828]/5 border border-[#C62828]/25 rounded-lg space-y-1">
-                <span className="text-[10px] font-bold uppercase text-[#C62828]">
-                  Current Activity
+              {/* Anomaly Origin */}
+              <div className="absolute top-[55%] left-[65%] w-16 h-16 flex items-center justify-center">
+                <div className="absolute inset-0 border border-[#ffb4ab]/50 rounded-full animate-ping" />
+                <div className="w-4 h-4 bg-[#ffb4ab] rounded-full shadow-[0_0_12px_rgba(255,180,171,0.8)]" />
+                <span className="absolute -bottom-6 font-mono text-[9px] text-[#ffb4ab] flex items-center gap-1 bg-[#20201a] px-1.5 py-0.5 border border-[#ffb4ab]/40 whitespace-nowrap">
+                  <MapPin className="w-2.5 h-2.5" /> CURRENT ORIGIN
                 </span>
-                <p className="text-[#C62828] font-bold">02:15 AM (Off-hours)</p>
-                <p className="text-[11px] text-[#C62828] font-semibold">₹18.5L payment initiated</p>
-                <p className="text-[11px] text-[#C62828]">Modified payee: XYZ Holdings</p>
+              </div>
+
+              {/* Vector line */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                <line
+                  x1="38%"
+                  y1="35%"
+                  x2="68%"
+                  y2="62%"
+                  stroke="#ffb4ab"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                  className="marching-ants"
+                />
+              </svg>
+
+              {/* Stats overlay */}
+              <div className="absolute bottom-3 left-3 p-2 bg-[#0e0e0a]/90 border border-[#464742] font-mono text-[10px]">
+                <span className="text-[#91918a] block">DISTANCE DELTA:</span>
+                <span className="text-[#e5e2d9] font-bold">~420km / 80ms latency anomaly</span>
               </div>
             </div>
-          </div>
-
-          {/* AI / Behavioural Assessment */}
-          <div className="bg-white border border-[#E5E3DE] rounded-xl p-5 shadow-2xs space-y-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#171717]">
-              Behavioural Assessment
-            </span>
-            <p className="text-xs text-[#6B6B6B] leading-relaxed">
-              "The activity differs significantly from the identity's established behavioural baseline. The combination of unusual access timing, beneficiary modification, privilege change and high-value transaction increases the likelihood of account misuse."
-            </p>
           </div>
         </div>
       </div>

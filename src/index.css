@@ -2,39 +2,82 @@
 
 @layer base {
   :root {
-    --bg-primary: #F6F5F2;
-    --surface: #FFFFFF;
-    --text-primary: #171717;
-    --text-secondary: #6B6B6B;
-    --border-color: #E5E3DE;
-    --critical: #C62828;
-    --high: #C65D21;
-    --medium: #A87516;
-    --success: #26734D;
-    --info: #4C5D8A;
+    --bg-primary: #14140f;
+    --surface-lowest: #0e0e0a;
+    --surface-low: #1c1c16;
+    --surface: #20201a;
+    --surface-high: #2a2a24;
+    --surface-highest: #35352f;
+    --surface-bright: #3a3933;
+    --on-surface: #e5e2d9;
+    --on-surface-variant: #c7c7bf;
+    --outline: #91918a;
+    --outline-variant: #464742;
+    --primary: #c9c6c4;
+    --secondary: #e8c178;
+    --secondary-container: #5f4504;
+    --tertiary: #ffb3af;
+    --error: #ffb4ab;
+    --error-container: #93000a;
+    --on-error: #690005;
+    --oxblood: #812627;
   }
 
   body {
-    background-color: #F6F5F2;
-    color: #171717;
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #14140f;
+    color: #e5e2d9;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 
-  /* Custom subtle scrollbar */
+  /* Custom dark scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #0e0e0a;
   }
   ::-webkit-scrollbar-thumb {
-    background: #D4D2CD;
-    border-radius: 9999px;
+    background: #464742;
+    border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #BAB7B0;
+    background: #91918a;
   }
+}
+
+.micro-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.marching-ants {
+  stroke-dasharray: 4 4;
+  animation: march 1s linear infinite;
+}
+
+@keyframes march {
+  from { stroke-dashoffset: 8; }
+  to { stroke-dashoffset: 0; }
+}
+
+.tactical-corner-tl {
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 8px; height: 8px;
+  border-top: 2px solid #c9c6c4;
+  border-left: 2px solid #c9c6c4;
+}
+
+.tactical-corner-br {
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 8px; height: 8px;
+  border-bottom: 2px solid #c9c6c4;
+  border-right: 2px solid #c9c6c4;
 }
