@@ -338,9 +338,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (response.ok && data.success) {
           result = { success: true, telegramSent: true };
           addToast('✅ Telegram alert sent successfully.', 'success');
-          if (data.directLaunchUrl) {
-            window.open(data.directLaunchUrl, '_blank', 'noopener,noreferrer');
-          }
         } else {
           result = {
             success: false,

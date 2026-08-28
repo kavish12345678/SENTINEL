@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import https from 'https';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,8 +17,57 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-const BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8').trim();
-let discoveredChatId = (process.env.TELEGRAM_CHAT_ID || '').trim();
+// Helper for HTTPS Telegram API calls
+function callTelegramApi(endpoint, payload = null) {
+  return new Promise((resolve, reject) => {
+    const token = (process.env.TELEGRAM_BOT_TOKEN || '8766448719:AAHqYLbEQ1CDtAaZyfJsVG18qyABc_9opD8').trim();
+    const postData = payload ? JSON.stringify(payload) : null;
+
+    const options = {
+      hostname: 'api.telegram.org',
+      port: 443,
+      path: `/bot${token}/${endpoint}`,
+      method: payload ? 'POST' : 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 10000,
+    };
+
+    if (postData) {
+      options.headers['Content-Length'] = Buffer.byteLength(postData);
+    }
+
+    const req = https.request(options, (res) => {
+      let responseBody = '';
+      res.on('data', (chunk) => {
+        responseBody += chunk;
+      });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(responseBody);
+          resolve(parsed);
+        } catch (e) {
+          resolve({ ok: false, error: 'Invalid JSON response from Telegram' });
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Telegram API request timed out'));
+    });
+
+    if (postData) {
+      req.write(postData);
+    }
+    req.end();
+  });
+}
 
 // Helper to get formatted timestamp
 function getTimestamp() {
@@ -201,132 +251,74 @@ SENTINEL Behaviour Intelligence`;
   }
 }
 
-// Auto-discovery of Chat ID from Telegram getUpdates
-async function autoDetectChatId(token) {
-  if (discoveredChatId && discoveredChatId.trim()) return discoveredChatId.trim();
-
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token.trim()}/getUpdates`, {
-      signal: AbortSignal.timeout(4000),
-    });
-    const data = await res.json();
-    if (data.ok && data.result && data.result.length > 0) {
-      for (let i = data.result.length - 1; i >= 0; i--) {
-        const item = data.result[i];
-        const msg = item.message || item.channel_post || item.edited_message || item.callback_query?.message;
-        if (msg && msg.chat && msg.chat.id) {
-          discoveredChatId = String(msg.chat.id);
-          return discoveredChatId;
-        }
-      }
-    }
-  } catch (err) {
-    // ignore
-  }
-  return '';
-}
-
 // 1. POST /api/telegram-alert
 app.post('/api/telegram-alert', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || BOT_TOKEN).trim();
+  const chatId = (process.env.TELEGRAM_CHAT_ID || '1295989935').trim();
   const messageText = formatTelegramMessage(req.body);
-  const directLaunchUrl = `https://t.me/share/url?text=${encodeURIComponent(messageText)}`;
 
-  let targetChatId = (process.env.TELEGRAM_CHAT_ID || discoveredChatId || '').trim();
+  try {
+    const data = await callTelegramApi('sendMessage', {
+      chat_id: chatId,
+      text: messageText,
+    });
 
-  if (!targetChatId) {
-    targetChatId = await autoDetectChatId(token);
-  }
-
-  // If chat ID exists, send via Telegram Bot API
-  if (targetChatId) {
-    try {
-      const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
-      const response = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: targetChatId,
-          text: messageText,
-        }),
-        signal: AbortSignal.timeout(5000),
+    if (data.ok && data.result) {
+      return res.json({
+        success: true,
+        telegramSent: true,
+        messageId: data.result.message_id,
       });
-
-      const data = await response.json();
-
-      if (data.ok && data.result) {
-        return res.json({
-          success: true,
-          telegramSent: true,
-          messageId: data.result.message_id,
-          botUsername: 'Sentinel_pattern_alert_bot',
-          chatId: targetChatId,
-          directLaunchUrl,
-        });
-      }
-    } catch (error) {
-      console.warn('Bot sendMessage failed, using fallback', error);
+    } else {
+      return res.status(502).json({
+        success: false,
+        telegramSent: false,
+        error: data.description || 'Telegram Bot API error.',
+      });
     }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      telegramSent: false,
+      error: 'Network failure communicating with Telegram Bot API.',
+    });
   }
-
-  // If chat ID is not discovered yet, send instant direct launch payload
-  return res.json({
-    success: true,
-    telegramSent: true,
-    messageId: `gen-${Date.now()}`,
-    botUsername: 'Sentinel_pattern_alert_bot',
-    botStartUrl: 'https://t.me/Sentinel_pattern_alert_bot?start=start',
-    directLaunchUrl,
-  });
 });
 
 // 2. GET /api/telegram-status
 app.get('/api/telegram-status', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || BOT_TOKEN).trim();
-  let chatId = (process.env.TELEGRAM_CHAT_ID || discoveredChatId || '').trim();
-
-  if (!chatId) {
-    chatId = await autoDetectChatId(token);
-  }
+  const chatId = (process.env.TELEGRAM_CHAT_ID || '1295989935').trim();
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
-      signal: AbortSignal.timeout(4000),
-    });
-    const data = await response.json();
+    const data = await callTelegramApi('getMe');
 
     if (data.ok && data.result) {
       return res.json({
         connected: true,
         configured: Boolean(chatId),
         hasChatId: Boolean(chatId),
-        chatId: chatId || undefined,
+        chatId,
         botUsername: data.result.username,
         botName: data.result.first_name,
-        botStartUrl: `https://t.me/${data.result.username}?start=start`,
+      });
+    } else {
+      return res.json({
+        connected: false,
+        configured: false,
+        error: data.description || 'Bot token unauthorized.',
       });
     }
   } catch (error) {
-    // fallback
+    return res.json({
+      connected: false,
+      configured: false,
+      error: 'Unable to connect to Telegram servers.',
+    });
   }
-
-  return res.json({
-    connected: true,
-    configured: true,
-    botUsername: 'Sentinel_pattern_alert_bot',
-    botName: 'Sentinel alert bot',
-    botStartUrl: 'https://t.me/Sentinel_pattern_alert_bot?start=start',
-  });
 });
 
 // 3. POST /api/telegram-test
 app.post('/api/telegram-test', async (req, res) => {
-  const token = (process.env.TELEGRAM_BOT_TOKEN || BOT_TOKEN).trim();
-  let chatId = (process.env.TELEGRAM_CHAT_ID || discoveredChatId || '').trim();
-
-  if (!chatId) {
-    chatId = await autoDetectChatId(token);
-  }
+  const chatId = (process.env.TELEGRAM_CHAT_ID || '1295989935').trim();
 
   const testMessage = `🛡️ SENTINEL TEST ALERT
 
@@ -341,42 +333,32 @@ ONLINE
 Time:
 ${getTimestamp()}`;
 
-  const directLaunchUrl = `https://t.me/share/url?text=${encodeURIComponent(testMessage)}`;
+  try {
+    const data = await callTelegramApi('sendMessage', {
+      chat_id: chatId,
+      text: testMessage,
+    });
 
-  if (chatId) {
-    try {
-      const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
-      const response = await fetch(telegramUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: testMessage,
-        }),
-        signal: AbortSignal.timeout(5000),
+    if (data.ok && data.result) {
+      return res.json({
+        success: true,
+        telegramSent: true,
+        messageId: data.result.message_id,
       });
-
-      const data = await response.json();
-
-      if (data.ok && data.result) {
-        return res.json({
-          success: true,
-          telegramSent: true,
-          messageId: data.result.message_id,
-          directLaunchUrl,
-        });
-      }
-    } catch (error) {
-      console.warn('Test send failed', error);
+    } else {
+      return res.status(502).json({
+        success: false,
+        telegramSent: false,
+        error: data.description || 'Telegram Bot API error.',
+      });
     }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      telegramSent: false,
+      error: 'Network failure sending test alert.',
+    });
   }
-
-  return res.json({
-    success: true,
-    telegramSent: true,
-    botStartUrl: 'https://t.me/Sentinel_pattern_alert_bot?start=start',
-    directLaunchUrl,
-  });
 });
 
 // 4. POST /api/set-telegram-config
@@ -388,7 +370,6 @@ app.post('/api/set-telegram-config', (req, res) => {
   }
   if (chatId !== undefined) {
     process.env.TELEGRAM_CHAT_ID = chatId.trim();
-    discoveredChatId = chatId.trim();
   }
 
   try {
@@ -402,7 +383,7 @@ app.post('/api/set-telegram-config', (req, res) => {
   return res.json({
     success: true,
     hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
-    hasChatId: Boolean(process.env.TELEGRAM_CHAT_ID || discoveredChatId),
+    hasChatId: Boolean(process.env.TELEGRAM_CHAT_ID),
   });
 });
 
